@@ -1,4 +1,8 @@
 provider "google" {
-  project = "example-project-dev"
-  region  = "europe-west9"
+  project = var.project_id
+  region  = var.region
+}
+
+resource "google_compute_network" "vpc_network" {
+  name = var.vpc_name
 }
