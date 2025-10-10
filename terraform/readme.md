@@ -1,173 +1,169 @@
-## Terraform Workflow
+# Terraform Infrastructure Deployment Guide
 
-### Initialize Terraform
+This document provides a detailed step-by-step guide for managing **development** and **production** environments using **Terraform**.  
+It covers workflows for initialization, planning, applying, and destroying infrastructure components across multiple modules.
 
-**Setup Dev environment (vpc & bucket)**
+---
+
+## 🏗️ Infrastructure Modules Overview
+
+| Module | Purpose |
+|--------|----------|
+| `bootstrap` | Creates foundational resources like **VPC**, **subnets**, and **Cloud Storage buckets** for state management. |
+| `cluster` | Deploys **Kubernetes (GKE)** clusters and node pools. |
+| `iam` | Manages **Identity and Access Management (IAM)** roles, service accounts, and permissions. |
+| `db` | Provisions **managed PostgreSQL** database instances. |
+
+---
+
+## ⚙️ Terraform Workflow
+
+### 1. Initialize Terraform
+
+Each environment (Dev/Prod) and module must be initialized separately.
+
+#### 🧱 Bootstrap (VPC & Bucket)
 ```bash
+# Dev
 cd bootstrap
 terraform init -backend-config=./backends/dev.config  
-```
-**Setup Prod environment (vpc & bucket)**
-```bash
+
+# Prod
 cd bootstrap
 terraform init -backend-config=./backends/prd.config  
 ```
-**Cluster Dev environment**
+
+#### ☸️ Kubernetes Cluster
 ```bash
+# Dev
 cd cluster
 terraform init -var-file=dev.tfvars
-```
-**Cluster Prod environment**
-```bash
+
+# Prod
 cd cluster
 terraform init -var-file=prd.tfvars
 ```
-**IAM Settings Dev environment**
+
+#### 🔐 IAM Settings
 ```bash
+# Dev
 cd iam 
 terraform init -backend-config=./backends/dev.config  
-```
-**IAM Settings Prod environment**
-```bash
+
+# Prod
 cd iam 
 terraform init -backend-config=./backends/prd.config  
 ```
-**Managed DB Instance Dev environment**
+
+#### 🗄️ Managed DB Instance
 ```bash
+# Dev
 cd db 
 terraform init -var-file=dev.tfvars
-```
-**Managed DB Instance Prod environment**
-```bash
+
+# Prod
 cd db 
 terraform init -var-file=prd.tfvars
 ```
 
-### Plan Changes
+---
 
-**Setup Dev environment (vpc & bucket)**
-```bash
-cd bootstrap
-terraform plan -var-file=dev.tfvars  
-```
-**Setup Prod environment (vpc & bucket)**
-```bash
-cd bootstrap
-terraform plan -var-file=prd.tfvars
-```
-**Cluster Dev environment**
+### 2. Plan Changes
+
+Use `terraform plan` to preview changes before applying.
+
+#### Example:
 ```bash
 cd cluster
 terraform plan -var-file=dev.tfvars
 ```
-**Cluster Prod environment**
-```bash
-cd cluster
-terraform plan -var-file=prd.tfvars
-```
-**IAM Settings Dev environment**
-```bash
-cd iam 
-terraform plan -var-file=dev.tfvars  
-```
-**IAM Settings Prod environment**
-```bash
-cd iam 
-terraform plan -var-file=prd.tfvars
-```
-**Managed DB Instance Dev environment**
-```bash
-cd db 
-terraform plan -var-file=dev.tfvars
-```
-**Managed DB Instance Prod environment**
-```bash
-cd db 
-terraform plan -var-file=prd.tfvars
-```
 
-### Apply Changes
+Repeat for each environment and module as needed:
+- `bootstrap`
+- `cluster`
+- `iam`
+- `db`
 
-**Setup Dev environment (vpc & bucket)**
+---
+
+### 3. Apply Changes
+
+Apply the changes to create or update resources.
+
 ```bash
-cd bootstrap
-terraform apply -var-file=dev.tfvars  
-```
-**Setup Prod environment (vpc & bucket)**
-```bash
-cd bootstrap
-terraform apply -var-file=prd.tfvars  
-```
-**Cluster Dev environment**
-```bash
-cd cluster
 terraform apply -var-file=dev.tfvars
 ```
-**Cluster Prod environment**
+
+Once confirmed, Terraform will provision all required resources.
+
+> 💡 **Tip:** Always validate changes with `terraform plan` before applying in production.
+
+---
+
+### 4. Destroy Infrastructure
+
+To clean up resources and avoid unnecessary costs:
+
 ```bash
-cd cluster
-terraform apply -var-file=prd.tfvars
+terraform destroy -var-file=dev.tfvars
 ```
-**IAM Settings Dev environment**
+
+Repeat for each module as needed.
+
+---
+
+## 🧰 Additional Tips
+
+- Use separate **backend configs** for each environment to isolate state files.
+- Keep all `.tfvars` and `.config` files secure — never commit credentials or sensitive data.
+- Use `terraform fmt` and `terraform validate` before committing.
+- Consider using **Terraform Cloud** or **remote state locking** for team collaboration.
+
+---
+
+## ✅ Example Full Workflow (Dev Environment)
+
 ```bash
-cd iam 
-terraform apply -var-file=dev.tfvars  
-```
-**IAM Settings Prod environment**
-```bash
-cd iam 
-terraform apply -var-file=prd.tfvars
-```
-**Managed DB Instance Dev environment**
-```bash
-cd db 
+# Bootstrap resources
+cd bootstrap
+terraform init -backend-config=./backends/dev.config
+terraform apply -var-file=dev.tfvars
+
+# Create IAM roles
+cd ../iam
+terraform init -backend-config=./backends/dev.config
+terraform apply -var-file=dev.tfvars
+
+# Deploy Cluster
+cd ../cluster
+terraform init -var-file=dev.tfvars
+terraform apply -var-file=dev.tfvars
+
+# Create DB
+cd ../db
+terraform init -var-file=dev.tfvars
 terraform apply -var-file=dev.tfvars
 ```
-**Managed DB Instance Prod environment**
-```bash
-cd db 
-terraform apply -var-file=prd.tfvars
-```
 
-### Destroy Infrastructure
+---
 
-**Setup Dev environment (vpc & bucket)**
-```bash
-cd bootstrap
-terraform destroy -var-file=dev.tfvars
-```
-**Setup Prod environment (vpc & bucket)**
-```bash
-cd bootstrap
-terraform destroy -var-file=prd.tfvars
-```
-**Cluster Dev environment**
-```bash
-cd cluster
-terraform destroy -var-file=dev.tfvars
-```
-**Cluster Prod environment**
-```bash
-cd cluster
-terraform destroy -var-file=prd.tfvars
-```
-**IAM Settings Dev environment**
-```bash
-cd iam 
-terraform destroy -var-file=dev.tfvars  
-```
-**IAM Settings Prod environment**
-```bash
-cd iam 
-terraform destroy -var-file=prd.tfvars
-```
-**Managed DB Instance Dev environment**
-```bash
-cd db 
-terraform destroy -var-file=dev.tfvars  
-```
-**Managed DB Instance Prod environment**
-```bash
-cd db 
-terraform destroy -var-file=prd.tfvars
-```
+## 📦 Useful Commands
+
+| Command | Description |
+|----------|-------------|
+| `terraform fmt` | Format Terraform files for readability |
+| `terraform validate` | Validate configuration for syntax errors |
+| `terraform show` | Display current state or plan |
+| `terraform output` | Show output values after apply |
+| `terraform state list` | List all tracked resources |
+| `terraform state rm <resource>` | Remove specific resource from state |
+
+---
+
+## 🚀 Deployment Notes
+
+- Always **run bootstrap first** (to create VPC and backend buckets).
+- Ensure **service accounts** used by Terraform have sufficient permissions.
+- Prefer **environment-specific variables** (`dev.tfvars`, `prd.tfvars`) for configuration isolation.
+
+---
