@@ -22,3 +22,8 @@ variable "bucket_name" {
   type        = string
   description = "Name of the storage bucket"
 }
+
+variable "prefix" {
+  type        = string
+  description = "Bucket prefix"
+}
