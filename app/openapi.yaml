@@ -1,0 +1,247 @@
+openapi: 3.0.3
+info:
+  title: Task Manager API
+  version: 1.0.0
+  description: |
+    The Task Manager API allows clients to manage tasks asynchronously.
+    It supports task creation, retrieval, updating, and deletion with timestamp-based conflict prevention.
+
+    Each request must include a valid Bearer token in the `Authorization` header.
+    A correlation ID is automatically generated per request for traceability.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Tasks
+    description: Operations related to tasks
+  - name: System
+    description: System health and status endpoints
+
+paths:
+  /status:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Returns API status.
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /tasks:
+    post:
+      tags:
+        - Tasks
+      summary: Create a new task
+      operationId: createTask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid request body
+        '401':
+          description: Unauthorized
+        '409':
+          description: Timestamp conflict
+
+    get:
+      tags:
+        - Tasks
+      summary: Retrieve all tasks
+      operationId: getTasks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of all tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+
+  /tasks/{task_id}:
+    get:
+      tags:
+        - Tasks
+      summary: Retrieve a task by ID
+      operationId: getTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Task found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Task not found
+
+    put:
+      tags:
+        - Tasks
+      summary: Update a task
+      operationId: updateTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Task not found
+        '409':
+          description: Conflict due to outdated timestamp
+
+    delete:
+      tags:
+        - Tasks
+      summary: Delete a task
+      operationId: deleteTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: request_timestamp
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Task deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Task deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Task not found
+        '409':
+          description: Conflict due to outdated timestamp
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TaskCreate:
+      type: object
+      required:
+        - title
+        - content
+        - due_date
+        - request_timestamp
+      properties:
+        title:
+          type: string
+          example: "Finish project documentation"
+        content:
+          type: string
+          example: "Write the final API doc by Monday"
+        due_date:
+          type: string
+          format: date
+          example: "2025-10-10"
+        request_timestamp:
+          type: string
+          format: date-time
+          example: "2025-10-06T12:00:00Z"
+
+    TaskUpdate:
+      type: object
+      description: Used to update task details.
+      properties:
+        title:
+          type: string
+          example: "Update API endpoints"
+        content:
+          type: string
+          example: "Add PUT and DELETE methods"
+        due_date:
+          type: string
+          format: date
+          example: "2025-10-15"
+        done:
+          type: boolean
+          example: true
+        request_timestamp:
+          type: string
+          format: date-time
+          example: "2025-10-06T12:05:00Z"
+
+    Task:
+      allOf:
+        - $ref: '#/components/schemas/TaskCreate'
+        - type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            done:
+              type: boolean
+              example: false
