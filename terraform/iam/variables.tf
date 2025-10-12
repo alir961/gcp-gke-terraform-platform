@@ -9,18 +9,13 @@ variable "region" {
 }
 
 variable "professor" {
-  type = string
+  type        = string
   description = "User to give view permissions"
 }
 
 variable "members" {
-  type = map(string)
-  description = "Map of users to list of roles"
-}
-
-variable "bucket_name" {
-  type        = string
-  description = "GCS bucket for Terraform state"
+  type        = map(list(string))
+  description = "Map of user emails to the list of project roles they must receive"
 }
 
 variable "billing_account_id" {

@@ -1,0 +1,35 @@
+project_id         = "PROJECT_ID_PRD"
+region             = "REGION_PRD"
+professor          = "prof@example.com"
+billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
+
+members = {
+  "student.one@example.com" = [
+    "roles/viewer",
+    "roles/container.admin",
+    "roles/artifactregistry.writer",
+    "roles/cloudsql.admin",
+  ]
+  "student.two@example.com" = [
+    "roles/viewer",
+    "roles/container.admin",
+    "roles/artifactregistry.writer",
+    "roles/cloudsql.admin",
+  ]
+  "student.three@example.com" = [
+    "roles/viewer",
+    "roles/container.admin",
+    "roles/artifactregistry.writer",
+    "roles/cloudsql.admin",
+  ]
+  "student.four@example.com" = [
+    "roles/viewer",
+    "roles/container.admin",
+    "roles/artifactregistry.writer",
+    "roles/cloudsql.admin",
+  ]
+  "prof@example.com" = [
+    "roles/viewer",
+    "roles/iam.securityReviewer",
+  ]
+}

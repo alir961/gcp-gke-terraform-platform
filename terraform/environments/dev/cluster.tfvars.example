@@ -1,0 +1,5 @@
+project_id  = "PROJECT_ID_DEV"
+region      = "REGION_DEV"
+zone        = "ZONE_DEV"
+bucket_name = "DEV_STATE_BUCKET"
+prefix      = "bootstrap/dev"

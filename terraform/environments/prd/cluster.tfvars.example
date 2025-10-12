@@ -1,0 +1,5 @@
+project_id  = "PROJECT_ID_PRD"
+region      = "REGION_PRD"
+zone        = "ZONE_PRD"
+bucket_name = "PRD_STATE_BUCKET"
+prefix      = "bootstrap/prd"

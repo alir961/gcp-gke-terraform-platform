@@ -4,8 +4,8 @@ resource "google_sql_database_instance" "tasks_postgres" {
   region           = var.gcp_region
 
   settings {
-    tier     = "db-f1-micro"
-    edition  = "ENTERPRISE"
+    tier    = "db-f1-micro"
+    edition = "ENTERPRISE"
 
     backup_configuration {
       enabled = true

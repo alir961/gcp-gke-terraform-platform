@@ -1,0 +1,6 @@
+project_id  = "PROJECT_ID_PRD"
+region      = "REGION_PRD"
+vpc_name    = "team-prd-vpc"
+cidr_block  = "10.1.0.0/16"
+bucket_name = "PRD_STATE_BUCKET"
+prefix      = "bootstrap/prd"

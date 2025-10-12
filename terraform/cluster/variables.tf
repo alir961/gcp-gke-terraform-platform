@@ -14,13 +14,15 @@ variable "zone" {
 }
 
 variable "vpc_network_id" {
-  description = "The ID of the existing VPC network to attach the cluster to"
+  description = "Optional override for the VPC network ID (defaults to bootstrap output)"
   type        = string
+  default     = ""
 }
 
 variable "subnet_id" {
-  description = "The ID of the existing subnet for the cluster"
+  description = "Optional override for the subnet ID (defaults to bootstrap output)"
   type        = string
+  default     = ""
 }
 
 variable "node_count" {
@@ -36,11 +38,11 @@ variable "machine_type" {
 }
 
 variable "bucket_name" {
-  description = "GCS bucket for storing Terraform state"
+  description = "GCS bucket where the bootstrap Terraform state is stored"
   type        = string
 }
 
 variable "prefix" {
-  description = "Prefix for storing Terraform state in GCS"
+  description = "Prefix (folder) of the bootstrap Terraform state in the bucket"
   type        = string
 }

@@ -1,0 +1,3 @@
+gcp_project = "PROJECT_ID_PRD"
+gcp_region  = "REGION_PRD"
+db_password = "CHANGE_ME_PRD"

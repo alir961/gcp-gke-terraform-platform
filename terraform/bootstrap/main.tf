@@ -1,5 +1,5 @@
 terraform {
-  // local backend
+  backend "gcs" {}
 }
 
 provider "google" {

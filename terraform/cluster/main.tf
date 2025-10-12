@@ -1,11 +1,25 @@
 terraform {
-  backend "gcs"{
+  backend "gcs" {
   }
 }
 
 provider "google" {
   project = var.project_id
   region  = var.region
+}
+
+data "terraform_remote_state" "bootstrap" {
+  backend = "gcs"
+
+  config = {
+    bucket = var.bucket_name
+    prefix = var.prefix
+  }
+}
+
+locals {
+  vpc_network_id = var.vpc_network_id != "" ? var.vpc_network_id : data.terraform_remote_state.bootstrap.outputs.vpc_id
+  subnet_id      = var.subnet_id != "" ? var.subnet_id : data.terraform_remote_state.bootstrap.outputs.subnet_id
 }
 
 resource "google_container_cluster" "tasks_cluster" {
@@ -15,8 +29,8 @@ resource "google_container_cluster" "tasks_cluster" {
   remove_default_node_pool = true
   initial_node_count       = 1
 
-  network    = var.vpc_network_id
-  subnetwork = var.subnet_id
+  network    = local.vpc_network_id
+  subnetwork = local.subnet_id
 }
 
 resource "google_container_node_pool" "tasks_nodes" {
