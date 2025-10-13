@@ -5,12 +5,16 @@ variable "gcp_project" {
 
 variable "gcp_region" {
   type        = string
-  description = "GCP region for resources"
-  default     = "us-central1"
+  description = "Region for the Cloud SQL instance"
+}
+
+variable "vpc_network" {
+  description = "Full path of the VPC network"
+  type        = string
 }
 
 variable "db_password" {
+  description = "Initial database password"
   type        = string
-  description = "Password for PostgreSQL user"
   sensitive   = true
 }
