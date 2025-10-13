@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
-pydantic
-sqlalchemy
+sqlalchemy[asyncio]
 asyncpg
 python-dotenv
+aioredis
+pyjwt
+fastapi-limiter

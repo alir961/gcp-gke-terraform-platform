@@ -5,3 +5,4 @@
 *.tfstate.backup
 app/__pycache__
 .idea
+app/.env
