@@ -1,2 +1,2 @@
 bucket = "example-project-prd-tfstate"
-prefix = "iam"
+prefix = "db/prd"
