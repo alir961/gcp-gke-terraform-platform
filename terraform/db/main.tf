@@ -1,3 +1,11 @@
+resource "google_project_service" "service_networking" {
+  service = "servicenetworking.googleapis.com"
+}
+
+resource "google_project_service" "secret_manager" {
+  service = "secretmanager.googleapis.com"
+}
+
 resource "google_compute_global_address" "private_ip_address" {
   name          = "tasks-db-private-ip"
   purpose       = "VPC_PEERING"
@@ -10,18 +18,31 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   network                 = var.vpc_network
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+
+  depends_on = [
+    google_project_service.service_networking
+  ]
 }
 
 resource "google_secret_manager_secret" "db_password_secret" {
   secret_id = "tasks-db-password"
+
   replication {
-    automatic = true
+    auto {}
   }
+
+  depends_on = [
+    google_project_service.secret_manager
+  ]
 }
 
 resource "google_secret_manager_secret_version" "db_password_secret_version" {
   secret      = google_secret_manager_secret.db_password_secret.id
   secret_data = var.db_password
+
+  depends_on = [
+    google_project_service.secret_manager
+  ]
 }
 
 resource "google_sql_database_instance" "tasks_postgres" {
@@ -29,7 +50,9 @@ resource "google_sql_database_instance" "tasks_postgres" {
   database_version = "POSTGRES_16"
   region           = var.gcp_region
 
-  depends_on = [google_service_networking_connection.private_vpc_connection]
+  depends_on = [
+    google_service_networking_connection.private_vpc_connection
+  ]
 
   settings {
     tier     = "db-f1-micro"
@@ -42,10 +65,6 @@ resource "google_sql_database_instance" "tasks_postgres" {
 
     backup_configuration {
       enabled = true
-    }
-
-    ip_configuration {
-      ipv4_enabled = true
     }
   }
 }
