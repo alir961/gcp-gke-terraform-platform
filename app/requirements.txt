@@ -3,6 +3,6 @@ uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
 python-dotenv
-aioredis
+redis==4.5.5
 pyjwt
 fastapi-limiter

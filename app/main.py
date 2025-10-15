@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Request, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from dotenv import load_dotenv
-import aioredis
+from redis.asyncio import Redis
 import jwt
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
@@ -49,10 +49,14 @@ async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Init Redis for rate limiting
-    redis = await aioredis.from_url(REDIS_URL, encoding="utf-8", decode_responses=True)
-    await FastAPILimiter.init(redis)
-    logger.info(f"Rate limiter initialized for {ENVIRONMENT}")
+    try:
+        logger.info("Connecting to Redis at %s", REDIS_URL)
+        redis_client = Redis.from_url(REDIS_URL, encoding="utf-8", decode_responses=True)
+        await redis_client.ping()
+        await FastAPILimiter.init(redis_client)
+        logger.info(f"Rate limiter initialized for {ENVIRONMENT}")
+    except Exception as exc:
+        logger.warning("Redis not ready, rate limiting disabled: %s", exc)
 
 # -----------------------------
 # Correlation ID middleware
