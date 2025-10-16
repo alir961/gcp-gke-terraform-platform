@@ -31,6 +31,7 @@ resource "google_container_cluster" "tasks_cluster" {
 
   network    = local.vpc_network_id
   subnetwork = local.subnet_id
+  deletion_protection = false
 }
 
 resource "google_container_node_pool" "tasks_nodes" {
