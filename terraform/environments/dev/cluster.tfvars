@@ -1,0 +1,5 @@
+project_id  = "example-project-dev"
+region      = "europe-west1"
+zone        = "europe-west1-b"
+bucket_name = "example-project-dev-tfstate"
+prefix      = "bootstrap/dev"

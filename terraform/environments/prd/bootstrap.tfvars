@@ -1,0 +1,6 @@
+project_id  = "example-project-prd"
+region      = "europe-west1"
+vpc_name    = "iac-prd-vpc"
+cidr_block  = "10.1.0.0/16"
+bucket_name = "example-project-prd-tfstate"
+prefix      = "bootstrap"
