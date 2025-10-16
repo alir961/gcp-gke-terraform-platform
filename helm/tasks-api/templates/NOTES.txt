@@ -1,0 +1,6 @@
+API installée. Pour tester :
+
+  kubectl port-forward deploy/tasks-api 8080:8080
+  curl http://127.0.0.1:8080/status
+
+Swagger : http://127.0.0.1:8080/docs

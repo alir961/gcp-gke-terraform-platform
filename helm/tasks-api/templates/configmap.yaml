@@ -1,0 +1,16 @@
+{{- $dbHost := required "app.db.host is required" .Values.app.db.host -}}
+{{- $dbUser := required "app.db.user is required" .Values.app.db.user -}}
+{{- $redisUrl := required "app.redisUrl is required" .Values.app.redisUrl -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tasks-api.configMapName" . }}
+  labels:
+    {{- include "tasks-api.labels" . | nindent 4 }}
+data:
+  ENVIRONMENT: {{ .Values.app.environment | quote }}
+  DB_HOST: {{ $dbHost | quote }}
+  DB_PORT: "{{ .Values.app.db.port }}"
+  DB_NAME: {{ .Values.app.db.name | quote }}
+  DB_USER: {{ $dbUser | quote }}
+  REDIS_URL: {{ $redisUrl | quote }}

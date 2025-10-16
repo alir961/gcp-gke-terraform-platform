@@ -19,6 +19,10 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   depends_on = [
     google_project_service.service_networking
   ]
@@ -46,17 +50,18 @@ resource "google_secret_manager_secret_version" "db_password_secret_version" {
 }
 
 resource "google_sql_database_instance" "tasks_postgres" {
-  name             = "tasks-db"
-  database_version = "POSTGRES_16"
-  region           = var.gcp_region
+  name                = "tasks-db"
+  database_version    = "POSTGRES_16"
+  region              = var.gcp_region
+  deletion_protection = false
 
   depends_on = [
     google_service_networking_connection.private_vpc_connection
   ]
 
   settings {
-    tier     = "db-f1-micro"
-    edition  = "ENTERPRISE"
+    tier    = "db-f1-micro"
+    edition = "ENTERPRISE"
 
     ip_configuration {
       ipv4_enabled    = false
