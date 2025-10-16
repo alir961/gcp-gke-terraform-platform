@@ -23,6 +23,11 @@ variable "bucket_name" {
   description = "Name of the storage bucket"
 }
 
+variable "bucket_location" {
+  type        = string
+  description = "Location/region for the storage bucket"
+}
+
 variable "prefix" {
   type        = string
   description = "Bucket prefix"
