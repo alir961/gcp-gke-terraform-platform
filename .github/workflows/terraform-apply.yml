@@ -1,0 +1,91 @@
+name: Terraform Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Tapez "DEPLOY" pour lancer terraform apply sur dev puis prod'
+        required: true
+        default: "NO"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-apply
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Vérification manuelle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier la confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "DEPLOY" ]; then
+            echo "Vous devez saisir DEPLOY pour exécuter ce workflow."
+            exit 1
+          fi
+
+  deploy_dev:
+    name: Apply Dev
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: guard
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Authenticate to Google Cloud (dev)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_DEV }}
+
+      - name: Set gcloud project (dev)
+        run: gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
+
+      - name: Terraform apply (dev)
+        run: |
+          set -euo pipefail
+          for module in bootstrap iam db cluster; do
+            echo "::group::Terraform apply dev - ${module}"
+            terraform -chdir=terraform/${module} init -input=false -backend-config=backends/backend-dev.hcl
+            terraform -chdir=terraform/${module} apply -input=false -auto-approve -var-file=../environments/dev/${module}.tfvars
+            echo "::endgroup::"
+          done
+
+  deploy_prd:
+    name: Apply Prod
+    runs-on: ubuntu-latest
+    environment: prd
+    needs: deploy_dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Authenticate to Google Cloud (prd)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_PRD }}
+
+      - name: Set gcloud project (prd)
+        run: gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
+
+      - name: Terraform apply (prd)
+        run: |
+          set -euo pipefail
+          for module in bootstrap iam db cluster; do
+            echo "::group::Terraform apply prd - ${module}"
+            terraform -chdir=terraform/${module} init -input=false -backend-config=backends/backend-prd.hcl
+            terraform -chdir=terraform/${module} apply -input=false -auto-approve -var-file=../environments/prd/${module}.tfvars
+            echo "::endgroup::"
+          done

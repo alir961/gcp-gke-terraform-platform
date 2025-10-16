@@ -1,0 +1,111 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  fmt_validate:
+    name: Format & Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform fmt (modules)
+        run: |
+          terraform -chdir=terraform/bootstrap fmt -check
+          terraform -chdir=terraform/cluster fmt -check
+          terraform -chdir=terraform/db fmt -check
+          terraform -chdir=terraform/iam fmt -check
+
+      - name: Terraform init & validate (modules)
+        run: |
+          terraform -chdir=terraform/bootstrap init -backend=false -input=false
+          terraform -chdir=terraform/bootstrap validate -no-color
+          terraform -chdir=terraform/cluster init -backend=false -input=false
+          terraform -chdir=terraform/cluster validate -no-color
+          terraform -chdir=terraform/db init -backend=false -input=false
+          terraform -chdir=terraform/db validate -no-color
+          terraform -chdir=terraform/iam init -backend=false -input=false
+          terraform -chdir=terraform/iam validate -no-color
+
+  plan_dev:
+    name: Plan Dev
+    needs: fmt_validate
+    runs-on: ubuntu-latest
+    environment: dev
+    strategy:
+      matrix:
+        module: [bootstrap, cluster, db, iam]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Authenticate to Google Cloud (dev)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_DEV }}
+
+      - name: Set gcloud project (dev)
+        run: gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
+
+      - name: Terraform init (dev)
+        run: terraform -chdir=terraform/${{ matrix.module }} init -input=false -backend-config=backends/backend-dev.hcl
+
+      - name: Terraform plan (dev)
+        run: terraform -chdir=terraform/${{ matrix.module }} plan -input=false -no-color -var-file=../environments/dev/${{ matrix.module }}.tfvars -out=tfplan-dev
+
+      - name: Upload plan artifact (dev)
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-dev-${{ matrix.module }}
+          path: terraform/${{ matrix.module }}/tfplan-dev
+
+  plan_prd:
+    name: Plan Prd
+    needs: fmt_validate
+    runs-on: ubuntu-latest
+    environment: prd
+    strategy:
+      matrix:
+        module: [bootstrap, cluster, db, iam]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Authenticate to Google Cloud (prd)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_PRD }}
+
+      - name: Set gcloud project (prd)
+        run: gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
+
+      - name: Terraform init (prd)
+        run: terraform -chdir=terraform/${{ matrix.module }} init -input=false -backend-config=backends/backend-prd.hcl
+
+      - name: Terraform plan (prd)
+        run: terraform -chdir=terraform/${{ matrix.module }} plan -input=false -no-color -var-file=../environments/prd/${{ matrix.module }}.tfvars -out=tfplan-prd
+
+      - name: Upload plan artifact (prd)
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-prd-${{ matrix.module }}
+          path: terraform/${{ matrix.module }}/tfplan-prd

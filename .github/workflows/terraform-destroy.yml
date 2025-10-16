@@ -1,0 +1,79 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environnement à détruire (dev ou prd)"
+        required: true
+        default: "dev"
+      confirmation:
+        description: 'Tapez "DESTROY" pour confirmer la destruction Terraform'
+        required: true
+        default: "NO"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  guard:
+    name: Vérification manuelle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier la confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "DESTROY" ]; then
+            echo "Vous devez saisir DESTROY pour lancer la destruction."
+            exit 1
+          fi
+      - name: Vérifier l'environnement
+        run: |
+          if [ "${{ github.event.inputs.environment }}" != "dev" ] && [ "${{ github.event.inputs.environment }}" != "prd" ]; then
+            echo "L'environnement doit être dev ou prd."
+            exit 1
+          fi
+
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    needs: guard
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Authentification GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ github.event.inputs.environment == 'dev' && secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
+          service_account: ${{ github.event.inputs.environment == 'dev' && secrets.GCP_SERVICE_ACCOUNT_DEV || secrets.GCP_SERVICE_ACCOUNT_PRD }}
+
+      - name: Définir le projet GCP
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+            gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
+          else
+            gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
+          fi
+
+      - name: Terraform destroy
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+            BACKEND=backends/backend-dev.hcl
+            TFVARS_DIR=../environments/dev
+          else
+            BACKEND=backends/backend-prd.hcl
+            TFVARS_DIR=../environments/prd
+          fi
+
+          for module in cluster db iam bootstrap; do
+            echo "::group::Terraform destroy ${{ github.event.inputs.environment }} - ${module}"
+            terraform -chdir=terraform/${module} init -input=false -backend-config=${BACKEND}
+            terraform -chdir=terraform/${module} destroy -input=false -auto-approve -var-file=${TFVARS_DIR}/${module}.tfvars
+            echo "::endgroup::"
+          done

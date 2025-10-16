@@ -16,6 +16,42 @@ It covers workflows for initialization, planning, applying, and destroying infra
 
 ---
 
+## 🤖 GitHub Actions Automation
+
+### Plan (PR)
+- Workflow : `.github/workflows/terraform-plan.yml`
+- Déclencheur : chaque pull request vers `main`.
+- Actions : `terraform fmt` + `terraform validate` (en local sans backend), puis `terraform plan` pour **chaque module** et pour **dev/prd**.
+- Authentification : via Workload Identity Federation (actions `google-github-actions/auth@v2`) en récupérant les secrets d’environnement.
+- Artefacts : les plans (`tfplan-dev` / `tfplan-prd`) sont publiés pour revue hors ligne.
+
+### Apply (Release manuelle)
+- Workflow : `.github/workflows/terraform-apply.yml`
+- Déclencheur : `Actions → Terraform Apply → Run workflow`.
+- Garde-fou : champ `confirmation` obligatoire, la valeur doit être `DEPLOY`. Sans ça, le job échoue.  
+  Cette confirmation compense l’absence d’approbation native (dépôt privé sur plan gratuit) et répond à l’exigence du cours (« valider manuellement les déploiements »).
+- Chaîne : apply `bootstrap → iam → db → cluster` en **dev**, puis en **prod** si le job dev réussit.
+- Environnements GitHub (`environment: dev/prd`) pour charger les secrets et tracer l’exécution.
+
+### Destroy (Manuel)
+- Workflow : `.github/workflows/terraform-destroy.yml`
+- Déclencheur : `Actions → Terraform Destroy → Run workflow`.
+- Paramètres : `environment` (`dev` ou `prd`) + confirmation `DESTROY`.
+- Chaîne : destroy `cluster → db → iam → bootstrap`, avec authentification OIDC identique aux autres workflows.
+
+### Secrets GitHub à définir (environnements)
+| Secret | Valeur |
+|--------|--------|
+| `GCP_PROJECT_DEV` / `PRD` | ID projet GCP (`example-project-dev`, `example-project-prd`) |
+| `GCP_SERVICE_ACCOUNT_DEV` / `PRD` | Comptes de service GitHub Actions |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER_DEV` / `PRD` | Identifiants complets des providers OIDC |
+| `TF_BUCKET_DEV` / `PRD` | Buckets de state |
+| `TF_BILLING_ACCOUNT` | `XXXXXX-XXXXXX-XXXXXX` (optionnel mais recommandé) |
+
+> ℹ️ **Documentation soutenance** : préciser que les déploiements prod sont déclenchés manuellement via `workflow_dispatch` + confirmation, faute de protection native GitHub sur plan gratuit.
+
+---
+
 ## ⚙️ Terraform Workflow
 
 ### 1. Initialize Terraform
