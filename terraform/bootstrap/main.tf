@@ -21,5 +21,5 @@ resource "google_compute_subnetwork" "subnet" {
 
 resource "google_storage_bucket" "image_bucket" {
   name     = var.bucket_name
-  location = "EUROPE-WEST1"
+  location = "EU"
 }
