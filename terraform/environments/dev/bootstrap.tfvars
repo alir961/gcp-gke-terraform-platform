@@ -1,0 +1,7 @@
+project_id  = "example-project-dev"
+region      = "europe-west1"
+vpc_name    = "iac-dev-vpc"
+cidr_block  = "10.0.0.0/16"
+bucket_name = "example-project-dev-tfstate"
+bucket_location = "EU"
+prefix      = "bootstrap"
