@@ -1,0 +1,7 @@
+Redis déployé avec le release {{ .Release.Name }}.
+
+Tester localement :
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "tasks-redis.fullname" . }} 6379:6379
+
+Puis consomme depuis l'hôte via redis-cli ou l'application (`redis://127.0.0.1:6379`).
