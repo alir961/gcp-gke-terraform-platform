@@ -11,8 +11,7 @@ provider "helm" {
 resource "helm_release" "tasks_api" {
   depends_on = [google_container_cluster.tasks_cluster]
   name       = "tasks-api"
-  repository = "file://../../helm/tasks-api"
-  chart      = "tasks-api"
+  chart      = "../../helm/tasks-api"
   namespace  = var.env
   values = [
     file("../../helm/tasks-api/values.${var.env}.yaml")
@@ -26,8 +25,7 @@ resource "helm_release" "tasks_api" {
 resource "helm_release" "tasks_redis" {
   depends_on = [helm_release.tasks_api]
   name       = "tasks-redis"
-  repository = "file://../../helm/tasks-redis"
-  chart      = "tasks-redis"
+  chart      = "../../helm/tasks-redis"
   namespace  = var.env
   values = [
     file("../../helm/tasks-redis/values.${var.env}.yaml")
