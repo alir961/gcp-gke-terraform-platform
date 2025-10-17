@@ -23,14 +23,14 @@ resource "helm_release" "tasks_api" {
   cleanup_on_fail = true
 }
 
-resource "helm_release" "task_redis" {
+resource "helm_release" "tasks_redis" {
   depends_on = [helm_release.tasks_api]
-  name       = "task-redis"
-  repository = "file://../../helm/task-redis"
-  chart      = "task-redis"
+  name       = "tasks-redis"
+  repository = "file://../../helm/tasks-redis"
+  chart      = "tasks-redis"
   namespace  = var.env
   values = [
-    file("../../helm/task-redis/values.${var.env}.yaml")
+    file("../../helm/tasks-redis/values.${var.env}.yaml")
   ]
 
   wait            = true
