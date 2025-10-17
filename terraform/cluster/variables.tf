@@ -40,3 +40,9 @@ variable "prefix" {
   description = "Prefix (folder) of the bootstrap Terraform state in the bucket"
   type        = string
 }
+
+variable "env" {
+  description = "Environment (dev/prod)"
+  type        = string
+  default     = "dev"
+}
