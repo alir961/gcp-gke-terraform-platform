@@ -31,6 +31,12 @@ resource "google_container_cluster" "tasks_cluster" {
 
   network    = local.vpc_network_id
   subnetwork = local.subnet_id
+
+  master_auth {
+    client_certificate_config {
+      issue_client_certificate = true
+    }
+  }
 }
 
 resource "google_container_node_pool" "tasks_nodes" {
