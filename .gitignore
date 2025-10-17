@@ -5,9 +5,5 @@
 app/__pycache__
 .idea
 app/.env
-helm/tasks-api/values.dev.yaml
-helm/tasks-api/values.prd.yaml
-helm/tasks-redis/values.dev.yaml
-helm/tasks-redis/values.prd.yaml
 # Local Terraform overrides (keep examples tracked)
 *.tfvars.local

@@ -20,18 +20,16 @@ It covers workflows for initialization, planning, applying, and destroying infra
 
 ### Plan (PR)
 - Workflow : `.github/workflows/terraform-plan.yml`
-- Déclencheur : chaque pull request vers `main`.
-- Actions : `terraform fmt` + `terraform validate` (en local sans backend), puis `terraform plan` pour **chaque module** et pour **dev/prd**.
+- Déclencheur : chaque pull request vers `dev` (plan dev) et `main` (plan prod).
+- Actions : `terraform fmt` + `terraform validate` (en local sans backend), puis `terraform plan` pour **chaque module** sur l’environnement concerné.
 - Authentification : via Workload Identity Federation (actions `google-github-actions/auth@v2`) en récupérant les secrets d’environnement.
 - Artefacts : les plans (`tfplan-dev` / `tfplan-prd`) sont publiés pour revue hors ligne.
 
-### Apply (Release manuelle)
+### Apply (Merges + relance manuelle)
 - Workflow : `.github/workflows/terraform-apply.yml`
-- Déclencheur : `Actions → Terraform Apply → Run workflow`.
-- Garde-fou : champ `confirmation` obligatoire, la valeur doit être `DEPLOY`. Sans ça, le job échoue.  
-  Cette confirmation compense l’absence d’approbation native (dépôt privé sur plan gratuit) et répond à l’exigence du cours (« valider manuellement les déploiements »).
-- Chaîne : apply `bootstrap → iam → db → cluster` en **dev**, puis en **prod** si le job dev réussit.
-- Environnements GitHub (`environment: dev/prd`) pour charger les secrets et tracer l’exécution.
+- Déclencheurs automatiques : `push` sur `dev` → apply **dev**, `push` sur `main` → apply **prod** (les environnements GitHub peuvent exiger une approbation humaine côté interface).
+- Déclencheur manuel : `Actions → Terraform Apply → Run workflow` (sélectionner `dev` ou `prd` et saisir `DEPLOY` pour rejouer un déploiement).
+- Chaîne : apply `bootstrap → iam → db → cluster` pour l’environnement choisi.
 
 ### Destroy (Manuel)
 - Workflow : `.github/workflows/terraform-destroy.yml`
@@ -48,7 +46,7 @@ It covers workflows for initialization, planning, applying, and destroying infra
 | `TF_BUCKET_DEV` / `PRD` | Buckets de state |
 | `TF_BILLING_ACCOUNT` | `XXXXXX-XXXXXX-XXXXXX` (optionnel mais recommandé) |
 
-> ℹ️ **Documentation soutenance** : préciser que les déploiements prod sont déclenchés manuellement via `workflow_dispatch` + confirmation, faute de protection native GitHub sur plan gratuit.
+> ℹ️ **Documentation soutenance** : préciser que prod est déployé après merge sur `main` (avec validation éventuelle côté environnement GitHub) et qu’un workflow manuel existe pour rejouer un apply si besoin.
 
 ---
 

@@ -1,0 +1,44 @@
+image:
+  repository: europe-west1-docker.pkg.dev/example-project-prd/tasks-registry/tasks-api
+  tag: latest
+
+app:
+  environment: prod
+  containerPort: 8080
+  livenessPath: /status
+  readinessPath: /status
+  redisUrl: redis://tasks-redis.prod.svc.cluster.local:6379
+  db:
+    host: "10.41.0.3"
+    port: 5432
+    name: tasks_db
+    user: tasks_user
+
+secret:
+  create: false
+  nameOverride: tasks-api-secret
+
+serviceAccount:
+  create: false
+  name: tasks-api-sa
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+replicaCount: 3
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 15
+  targetCPUUtilizationPercentage: 60
+
+resources:
+  requests:
+    cpu: 300m
+    memory: 384Mi
+  limits:
+    cpu: 700m
+    memory: 768Mi

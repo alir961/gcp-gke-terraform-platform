@@ -29,8 +29,9 @@ resource "google_container_cluster" "tasks_cluster" {
   remove_default_node_pool = true
   initial_node_count       = 1
 
-  network    = local.vpc_network_id
-  subnetwork = local.subnet_id
+  network             = local.vpc_network_id
+  subnetwork          = local.subnet_id
+  deletion_protection = true
 
   master_auth {
     client_certificate_config {
@@ -40,9 +41,9 @@ resource "google_container_cluster" "tasks_cluster" {
 }
 
 resource "google_container_node_pool" "tasks_nodes" {
-  name       = "tasks-node-pool"
-  cluster    = google_container_cluster.tasks_cluster.name
-  location   = google_container_cluster.tasks_cluster.location
+  name     = "tasks-node-pool"
+  cluster  = google_container_cluster.tasks_cluster.name
+  location = google_container_cluster.tasks_cluster.location
 
   node_count = 1
 

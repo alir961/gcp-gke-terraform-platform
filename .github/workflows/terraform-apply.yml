@@ -1,10 +1,18 @@
 name: Terraform Apply
 
 on:
+  push:
+    branches:
+      - dev
+      - main
   workflow_dispatch:
     inputs:
+      environment:
+        description: "Environnement à déployer (dev ou prd)"
+        required: true
+        default: "dev"
       confirmation:
-        description: 'Tapez "DEPLOY" pour lancer terraform apply sur dev puis prod'
+        description: 'Tapez "DEPLOY" pour lancer terraform apply manuellement'
         required: true
         default: "NO"
 
@@ -17,25 +25,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  guard:
-    name: Vérification manuelle
+  deploy_dev:
+    name: Apply Dev
     runs-on: ubuntu-latest
+    environment: dev
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    env:
+      TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
     steps:
-      - name: Vérifier la confirmation
+      - name: Vérifier la confirmation (manuel)
+        if: github.event_name == 'workflow_dispatch'
         run: |
           if [ "${{ github.event.inputs.confirmation }}" != "DEPLOY" ]; then
             echo "Vous devez saisir DEPLOY pour exécuter ce workflow."
             exit 1
           fi
 
-  deploy_dev:
-    name: Apply Dev
-    runs-on: ubuntu-latest
-    environment: dev
-    needs: guard
-    env:
-      TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
-    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -65,10 +72,20 @@ jobs:
     name: Apply Prod
     runs-on: ubuntu-latest
     environment: prd
-    needs: deploy_dev
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
     steps:
+      - name: Vérifier la confirmation (manuel)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "DEPLOY" ]; then
+            echo "Vous devez saisir DEPLOY pour exécuter ce workflow."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
