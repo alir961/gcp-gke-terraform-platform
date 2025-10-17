@@ -37,7 +37,13 @@ resource "google_container_node_pool" "tasks_nodes" {
   name       = "tasks-node-pool"
   cluster    = google_container_cluster.tasks_cluster.name
   location   = google_container_cluster.tasks_cluster.location
-  node_count = var.node_count
+
+  node_count = 1
+
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 10
+  }
 
   node_config {
     machine_type = var.machine_type

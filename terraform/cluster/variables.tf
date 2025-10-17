@@ -25,12 +25,6 @@ variable "subnet_id" {
   default     = ""
 }
 
-variable "node_count" {
-  description = "Number of nodes in the node pool"
-  type        = number
-  default     = 2
-}
-
 variable "machine_type" {
   description = "Machine type for the nodes"
   type        = string
