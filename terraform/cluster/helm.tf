@@ -4,11 +4,14 @@
 data "google_client_config" "default" {}
 
 provider "kubernetes" {
-  config_path    = "~/.kube/config"
-  config_context = "gke_${var.project_id}_${var.zone}_tasks-cluster"
+  host                   = "https://${google_container_cluster.tasks_cluster.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(google_container_cluster.tasks_cluster.master_auth[0].cluster_ca_certificate)
 }
 
 resource "kubernetes_namespace" "env" {
+  depends_on = [google_container_cluster.tasks_cluster]
+
   metadata {
     name = var.env
   }
