@@ -25,10 +25,28 @@ variable "subnet_id" {
   default     = ""
 }
 
+variable "remove_default_node_pool" {
+  description = "Whether to remove the default node pool created with the cluster"
+  type        = bool
+  default     = false
+}
+
+variable "issue_client_certificate" {
+  description = "Whether the cluster API should issue client certificates"
+  type        = bool
+  default     = false
+}
+
 variable "machine_type" {
   description = "Machine type for the nodes"
   type        = string
   default     = "e2-standard-4"
+}
+
+variable "node_count" {
+  description = "Number of nodes in the managed node pool"
+  type        = number
+  default     = 1
 }
 
 variable "bucket_name" {
