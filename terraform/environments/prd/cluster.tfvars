@@ -1,6 +1,11 @@
-project_id  = "example-project-prd"
-region      = "europe-west1"
-zone        = "europe-west1-b"
-bucket_name = "example-project-prd-tfstate"
-prefix      = "bootstrap/prd"
-env         = "prd"
+project_id               = "example-project-prd"
+region                   = "europe-west1"
+zone                     = "europe-west1-b"
+bucket_name              = "example-project-prd-tfstate"
+prefix                   = "bootstrap/prd"
+vpc_network_id           = "projects/example-project-prd/global/networks/iac-prd-vpc"
+subnet_id                = "projects/example-project-prd/regions/europe-west1/subnetworks/iac-prd-vpc-subnet"
+remove_default_node_pool = true
+issue_client_certificate = false
+node_count               = 2
+env                      = "prd"

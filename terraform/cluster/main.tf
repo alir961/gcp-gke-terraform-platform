@@ -26,7 +26,7 @@ resource "google_container_cluster" "tasks_cluster" {
   name     = "tasks-cluster"
   location = var.zone
 
-  remove_default_node_pool = true
+  remove_default_node_pool = var.remove_default_node_pool
   initial_node_count       = 1
 
   network             = local.vpc_network_id
@@ -35,7 +35,7 @@ resource "google_container_cluster" "tasks_cluster" {
 
   master_auth {
     client_certificate_config {
-      issue_client_certificate = true
+      issue_client_certificate = var.issue_client_certificate
     }
   }
 }
@@ -45,7 +45,7 @@ resource "google_container_node_pool" "tasks_nodes" {
   cluster  = google_container_cluster.tasks_cluster.name
   location = google_container_cluster.tasks_cluster.location
 
-  node_count = 1
+  node_count = var.node_count
 
   autoscaling {
     min_node_count = 1
