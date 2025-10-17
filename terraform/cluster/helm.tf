@@ -16,10 +16,10 @@ resource "helm_release" "tasks_api" {
   values = [
     file("../../helm/tasks-api/values.${var.env}.yaml")
   ]
-  wait            = true
-  timeout         = 600
-  atomic          = true
-  cleanup_on_fail = true
+  wait            = false
+  timeout         = 300
+  atomic          = false
+  cleanup_on_fail = false
 }
 
 resource "helm_release" "tasks_redis" {
@@ -31,8 +31,8 @@ resource "helm_release" "tasks_redis" {
     file("../../helm/tasks-redis/values.${var.env}.yaml")
   ]
 
-  wait            = true
-  timeout         = 600
-  atomic          = true
-  cleanup_on_fail = true
+  wait            = false
+  timeout         = 300
+  atomic          = false
+  cleanup_on_fail = false
 }
