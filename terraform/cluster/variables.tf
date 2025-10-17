@@ -25,12 +25,6 @@ variable "subnet_id" {
   default     = ""
 }
 
-variable "node_count" {
-  description = "Number of nodes in the node pool"
-  type        = number
-  default     = 2
-}
-
 variable "machine_type" {
   description = "Machine type for the nodes"
   type        = string
@@ -45,4 +39,10 @@ variable "bucket_name" {
 variable "prefix" {
   description = "Prefix (folder) of the bootstrap Terraform state in the bucket"
   type        = string
+}
+
+variable "env" {
+  description = "Environment (dev/prod)"
+  type        = string
+  default     = "dev"
 }
