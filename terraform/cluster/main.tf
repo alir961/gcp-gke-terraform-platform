@@ -29,8 +29,8 @@ resource "google_container_cluster" "tasks_cluster" {
   remove_default_node_pool = true
   initial_node_count       = 1
 
-  network    = local.vpc_network_id
-  subnetwork = local.subnet_id
+  network             = local.vpc_network_id
+  subnetwork          = local.subnet_id
   deletion_protection = false
 }
 
