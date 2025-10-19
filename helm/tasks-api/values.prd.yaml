@@ -20,11 +20,11 @@ secret:
   nameOverride: tasks-api-secret
 
 serviceAccount:
-  create: true
+  create: false
   name: tasks-api-sa
 
 rbac:
-  create: true
+  create: false
 
 service:
   type: ClusterIP
