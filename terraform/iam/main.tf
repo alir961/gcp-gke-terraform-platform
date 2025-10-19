@@ -15,12 +15,12 @@ locals {
         for principal, roles in principals : [
           for role in roles : {
             principal = principal
-            type      = identity_type
+            member    = "${identity_type}:${principal}"
             role      = role
           }
         ]
       ]
-    ]) : "${item.type}-${item.principal}-${item.role}" => item
+    ]) : "${item.principal}-${item.role}" => item
   }
 }
 
@@ -28,7 +28,7 @@ resource "google_project_iam_member" "members" {
   for_each = local.iam_bindings
   project  = var.project_id
   role     = each.value.role
-  member   = "${each.value.type}:${each.value.principal}"
+  member   = each.value.member
 }
 
 resource "google_billing_account_iam_member" "billing" {
