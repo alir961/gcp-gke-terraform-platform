@@ -1,0 +1,12 @@
+{{- if .Values.ingress.enabled }}
+{{- $host := required "ingress.host is required when ingress.enabled is true" .Values.ingress.host }}
+{{- $certificate := required "ingress.managedCertificateName is required when ingress.enabled is true" .Values.ingress.managedCertificateName }}
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: {{ $certificate }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  domains:
+    - {{ $host }}
+{{- end }}

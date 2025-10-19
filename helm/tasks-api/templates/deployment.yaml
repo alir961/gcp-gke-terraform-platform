@@ -11,14 +11,23 @@ spec:
   selector:
     matchLabels:
       {{- include "tasks-api.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- if or .Values.podAnnotations .Values.prometheus.enabled }}
       annotations:
-        {{- toYaml . | nindent 8 }}
+        {{- if .Values.podAnnotations }}
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- end }}
+        {{- if .Values.prometheus.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/path: {{ .Values.prometheus.path | default "/status" | quote }}
+        prometheus.io/port: {{ .Values.prometheus.port | default (printf "%d" .Values.app.containerPort) | quote }}
+        {{- end }}
       {{- end }}
       labels:
         {{- include "tasks-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

@@ -3,8 +3,13 @@ name: Terraform Plan
 on:
   pull_request:
     branches:
-      - dev
       - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environnement à planifier (dev ou prd)"
+        required: false
+        default: "both"
 
 permissions:
   contents: read
@@ -39,16 +44,27 @@ jobs:
           terraform -chdir=terraform/iam init -backend=false -input=false
           terraform -chdir=terraform/iam validate -no-color
 
-  plan_dev:
-    name: Plan Dev
+  plan:
+    name: Terraform Plan (${{ matrix.environment }})
     needs: fmt_validate
     runs-on: ubuntu-latest
-    environment: dev
-    if: github.base_ref == 'dev'
+    if: >
+      (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+      (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.environment == 'both' || github.event.inputs.environment == matrix.environment))
+    environment: ${{ matrix.environment }}
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ matrix.environment == 'dev' && secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
+      GCP_SERVICE_ACCOUNT: ${{ matrix.environment == 'dev' && secrets.GCP_SERVICE_ACCOUNT_DEV || secrets.GCP_SERVICE_ACCOUNT_PRD }}
+      GCP_PROJECT: ${{ matrix.environment == 'dev' && secrets.GCP_PROJECT_DEV || secrets.GCP_PROJECT_PRD }}
+      TF_BACKEND_FILE: ${{ matrix.environment == 'dev' && 'backends/backend-dev.hcl' || 'backends/backend-prd.hcl' }}
+      TFVARS_DIR: ${{ matrix.environment == 'dev' && '../environments/dev' || '../environments/prd' }}
+      TFPLAN_NAME: ${{ matrix.environment == 'dev' && 'tfplan-dev' || 'tfplan-prd' }}
     strategy:
+      fail-fast: false
       matrix:
+        environment: [dev, prd]
         module: [bootstrap, cluster, db, iam]
     steps:
       - name: Checkout repository
@@ -57,62 +73,23 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Authenticate to Google Cloud (dev)
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_DEV }}
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
-      - name: Set gcloud project (dev)
-        run: gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
+      - name: Set gcloud project
+        run: gcloud config set project ${{ env.GCP_PROJECT }}
 
-      - name: Terraform init (dev)
-        run: terraform -chdir=terraform/${{ matrix.module }} init -input=false -backend-config=backends/backend-dev.hcl
+      - name: Terraform init (${{ matrix.environment }})
+        run: terraform -chdir=terraform/${{ matrix.module }} init -input=false -backend-config=${{ env.TF_BACKEND_FILE }}
 
-      - name: Terraform plan (dev)
-        run: terraform -chdir=terraform/${{ matrix.module }} plan -input=false -no-color -var-file=../environments/dev/${{ matrix.module }}.tfvars -out=tfplan-dev
+      - name: Terraform plan (${{ matrix.environment }})
+        run: terraform -chdir=terraform/${{ matrix.module }} plan -input=false -no-color -var-file=${{ env.TFVARS_DIR }}/${{ matrix.module }}.tfvars -out=${{ env.TFPLAN_NAME }}
 
-      - name: Upload plan artifact (dev)
+      - name: Upload plan artifact (${{ matrix.environment }})
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-plan-dev-${{ matrix.module }}
-          path: terraform/${{ matrix.module }}/tfplan-dev
-
-  plan_prd:
-    name: Plan Prd
-    needs: fmt_validate
-    runs-on: ubuntu-latest
-    environment: prd
-    if: github.base_ref == 'main'
-    env:
-      TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
-    strategy:
-      matrix:
-        module: [bootstrap, cluster, db, iam]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Authenticate to Google Cloud (prd)
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_PRD }}
-
-      - name: Set gcloud project (prd)
-        run: gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
-
-      - name: Terraform init (prd)
-        run: terraform -chdir=terraform/${{ matrix.module }} init -input=false -backend-config=backends/backend-prd.hcl
-
-      - name: Terraform plan (prd)
-        run: terraform -chdir=terraform/${{ matrix.module }} plan -input=false -no-color -var-file=../environments/prd/${{ matrix.module }}.tfvars -out=tfplan-prd
-
-      - name: Upload plan artifact (prd)
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-prd-${{ matrix.module }}
-          path: terraform/${{ matrix.module }}/tfplan-prd
+          name: terraform-plan-${{ matrix.environment }}-${{ matrix.module }}
+          path: terraform/${{ matrix.module }}/${{ env.TFPLAN_NAME }}

@@ -1,0 +1,17 @@
+{{- if .Values.backendConfig.enabled }}
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: {{ include "tasks-api.fullname" . }}
+  labels:
+    {{- include "tasks-api.labels" . | nindent 4 }}
+spec:
+  healthCheck:
+    type: HTTP
+    requestPath: {{ .Values.backendConfig.healthCheck.requestPath | default "/status" | quote }}
+    port: {{ .Values.backendConfig.healthCheck.port | default .Values.service.targetPort }}
+    checkIntervalSec: {{ .Values.backendConfig.healthCheck.intervalSec | default 10 }}
+    timeoutSec: {{ .Values.backendConfig.healthCheck.timeoutSec | default 5 }}
+    healthyThreshold: {{ .Values.backendConfig.healthCheck.healthyThreshold | default 1 }}
+    unhealthyThreshold: {{ .Values.backendConfig.healthCheck.unhealthyThreshold | default 3 }}
+{{- end }}

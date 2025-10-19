@@ -4,6 +4,15 @@ metadata:
   name: {{ include "tasks-api.fullname" . }}
   labels:
     {{- include "tasks-api.labels" . | nindent 4 }}
+  {{- if or .Values.service.annotations .Values.backendConfig.enabled }}
+  annotations:
+    {{- with .Values.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if .Values.backendConfig.enabled }}
+    cloud.google.com/backend-config: '{"default": "{{ include "tasks-api.fullname" . }}"}'
+    {{- end }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -13,3 +22,4 @@ spec:
       name: http
   selector:
     {{- include "tasks-api.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api
