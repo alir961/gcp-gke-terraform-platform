@@ -35,10 +35,13 @@ members = {
     ]
   }
   serviceAccount = {
-    "terraform-dev@example-project-dev.iam.gserviceaccount.com" = [
+    "github-actions-sa@example-project-dev.iam.gserviceaccount.com" = [
       "roles/dns.admin",
-      "roles/compute.networkAdmin",
-      "roles/compute.viewer"
+      "roles/compute.networkAdmin"
+    ]
+    "github-actions-ci-cd@example-project-dev.iam.gserviceaccount.com" = [
+      "roles/dns.admin",
+      "roles/compute.networkAdmin"
     ]
   }
 }
