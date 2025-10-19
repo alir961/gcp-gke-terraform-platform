@@ -9,3 +9,4 @@ remove_default_node_pool = true
 issue_client_certificate = true
 node_count               = 1
 env                      = "dev"
+ingress_ip_name          = "tasks-ingress-ip-dev"

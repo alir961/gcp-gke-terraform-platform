@@ -1,6 +1,11 @@
 from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime
 from datetime import datetime
-from database import Base
+
+try:
+    from app.database import Base  # type: ignore
+except ImportError:  # pragma: no cover - fallback when running as module
+    from database import Base
+
 
 class Task(Base):
     __tablename__ = "tasks"

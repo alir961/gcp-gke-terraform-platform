@@ -2,7 +2,11 @@ fastapi
 uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
+aiosqlite
 python-dotenv
 redis==4.5.5
 pyjwt
 fastapi-limiter
+httpx
+pytest
+pytest-asyncio

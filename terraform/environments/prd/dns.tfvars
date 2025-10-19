@@ -1,0 +1,9 @@
+project_id              = "example-project-prd"
+dns_managed_zone        = "example-project-com"
+record_name             = "api.example-project.com"
+cluster_state_bucket    = "example-project-prd-tfstate"
+cluster_state_prefix    = "cluster/prd"
+ttl                     = 60
+create_static_site      = true
+static_site_bucket_name = "example-project-com"
+api_http_endpoint       = "https://api.example-project.com"

@@ -9,3 +9,4 @@ remove_default_node_pool = true
 issue_client_certificate = false
 node_count               = 2
 env                      = "prd"
+ingress_ip_name          = "tasks-ingress-ip"

@@ -19,7 +19,7 @@ permissions:
 jobs:
   guard:
     name: Vérification manuelle
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     steps:
       - name: Vérifier la confirmation
         run: |
@@ -36,7 +36,7 @@ jobs:
 
   destroy:
     name: Terraform Destroy
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     needs: guard
     environment: ${{ github.event.inputs.environment }}
     env:
@@ -73,7 +73,7 @@ jobs:
             TFVARS_DIR=../environments/prd
           fi
 
-          for module in cluster db iam bootstrap; do
+          for module in dns cluster db iam bootstrap; do
             echo "::group::Terraform destroy ${{ github.event.inputs.environment }} - ${module}"
             terraform -chdir=terraform/${module} init -input=false -backend-config=${BACKEND}
             terraform -chdir=terraform/${module} destroy -input=false -auto-approve -var-file=${TFVARS_DIR}/${module}.tfvars

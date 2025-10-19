@@ -14,6 +14,14 @@ resource "kubernetes_namespace" "env" {
   }
 }
 
+resource "kubernetes_namespace" "monitoring" {
+  depends_on = [google_container_cluster.tasks_cluster]
+
+  metadata {
+    name = "${var.env}-monitoring"
+  }
+}
+
 provider "helm" {
   kubernetes = {
     host                   = google_container_cluster.tasks_cluster.endpoint
@@ -23,7 +31,7 @@ provider "helm" {
 }
 
 resource "helm_release" "tasks_api" {
-  depends_on = [google_container_cluster.tasks_cluster]
+  depends_on = [google_container_cluster.tasks_cluster, google_compute_global_address.ingress_ip]
   name       = "tasks-api"
   chart      = "../../helm/tasks-api"
   namespace  = var.env
@@ -34,4 +42,18 @@ resource "helm_release" "tasks_api" {
   timeout         = 300
   atomic          = false
   cleanup_on_fail = false
+}
+
+resource "helm_release" "monitoring" {
+  depends_on = [google_container_cluster.tasks_cluster, kubernetes_namespace.monitoring]
+  name       = "monitoring"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "kube-prometheus-stack"
+  version    = "78.3.2"
+  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+  values = [
+    file("../../helm/monitoring/values.${var.env}.yaml")
+  ]
+
+  timeout = 600
 }

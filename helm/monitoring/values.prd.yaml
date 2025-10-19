@@ -1,0 +1,40 @@
+alertmanager:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+grafana:
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  persistence:
+    enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 72h
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    podMonitorSelector: {}
+    ruleSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    resources:
+      requests:
+        cpu: 400m
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi

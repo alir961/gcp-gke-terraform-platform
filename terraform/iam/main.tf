@@ -11,13 +11,16 @@ provider "google" {
 locals {
   iam_bindings = {
     for item in flatten([
-      for user, roles in var.members : [
-        for role in roles : {
-          user = user
-          role = role
-        }
+      for identity_type, principals in var.members : [
+        for principal, roles in principals : [
+          for role in roles : {
+            principal = principal
+            type      = identity_type
+            role      = role
+          }
+        ]
       ]
-    ]) : "${item.user}-${item.role}" => item
+    ]) : "${item.type}-${item.principal}-${item.role}" => item
   }
 }
 
@@ -25,7 +28,7 @@ resource "google_project_iam_member" "members" {
   for_each = local.iam_bindings
   project  = var.project_id
   role     = each.value.role
-  member   = "user:${each.value.user}"
+  member   = "${each.value.type}:${each.value.principal}"
 }
 
 resource "google_billing_account_iam_member" "billing" {
