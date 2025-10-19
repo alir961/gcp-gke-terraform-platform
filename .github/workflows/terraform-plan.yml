@@ -16,9 +16,36 @@ permissions:
   id-token: write
 
 jobs:
+  tests:
+    name: API Tests
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Install dependencies
+        run: |
+          pip install -r app/requirements.txt
+          pip install pre-commit
+
+      - name: Run pre-commit checks
+        run: pre-commit run --all-files
+
+      - name: Run API tests
+        run: python -m pytest app/tests
+
   fmt_validate:
     name: Format & Validate
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: tests
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,6 +58,7 @@ jobs:
           terraform -chdir=terraform/bootstrap fmt -check
           terraform -chdir=terraform/cluster fmt -check
           terraform -chdir=terraform/db fmt -check
+          terraform -chdir=terraform/dns fmt -check
           terraform -chdir=terraform/iam fmt -check
 
       - name: Terraform init & validate (modules)
@@ -41,13 +69,15 @@ jobs:
           terraform -chdir=terraform/cluster validate -no-color
           terraform -chdir=terraform/db init -backend=false -input=false
           terraform -chdir=terraform/db validate -no-color
+          terraform -chdir=terraform/dns init -backend=false -input=false
+          terraform -chdir=terraform/dns validate -no-color
           terraform -chdir=terraform/iam init -backend=false -input=false
           terraform -chdir=terraform/iam validate -no-color
 
   plan_dev:
     name: Terraform Plan Dev
     needs: fmt_validate
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     if: >
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_dispatch' &&
@@ -57,7 +87,8 @@ jobs:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
     strategy:
       matrix:
-        module: [bootstrap, cluster, db, iam]
+        runner: ${{ fromJson(vars.CI_RUNNER_MATRIX || '["ubuntu-latest"]') }}
+        module: [bootstrap, cluster, db, dns, iam]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -89,7 +120,7 @@ jobs:
   plan_prd:
     name: Terraform Plan Prod
     needs: fmt_validate
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     if: >
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_dispatch' &&
@@ -99,7 +130,8 @@ jobs:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
     strategy:
       matrix:
-        module: [bootstrap, cluster, db, iam]
+        runner: ${{ fromJson(vars.CI_RUNNER_MATRIX || '["ubuntu-latest"]') }}
+        module: [bootstrap, cluster, db, dns, iam]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

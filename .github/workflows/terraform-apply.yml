@@ -24,10 +24,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  tests:
+    name: API Tests
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Install dependencies
+        run: |
+          pip install -r app/requirements.txt
+          pip install pre-commit
+
+      - name: Run pre-commit checks
+        run: pre-commit run --all-files
+
+      - name: Run API tests
+        run: python -m pytest app/tests
+
   deploy_dev:
     name: Apply Dev
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     environment: dev
+    needs: tests
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       github.event_name == 'workflow_dispatch'
@@ -69,7 +99,7 @@ jobs:
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
         run: |
           set -euo pipefail
-          for module in bootstrap iam db cluster; do
+          for module in bootstrap iam db cluster dns; do
             echo "::group::Terraform apply dev - ${module}"
             terraform -chdir=terraform/${module} init -input=false -backend-config=backends/backend-dev.hcl
             terraform -chdir=terraform/${module} apply -input=false -auto-approve -var-file=../environments/dev/${module}.tfvars
@@ -78,9 +108,9 @@ jobs:
 
   deploy_prd:
     name: Apply Prod
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     environment: prd
-    needs: deploy_dev
+    needs: [tests, deploy_dev]
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
@@ -113,7 +143,7 @@ jobs:
       - name: Terraform apply (prd)
         run: |
           set -euo pipefail
-          for module in bootstrap iam db cluster; do
+          for module in bootstrap iam db cluster dns; do
             echo "::group::Terraform apply prd - ${module}"
             terraform -chdir=terraform/${module} init -input=false -backend-config=backends/backend-prd.hcl
             terraform -chdir=terraform/${module} apply -input=false -auto-approve -var-file=../environments/prd/${module}.tfvars

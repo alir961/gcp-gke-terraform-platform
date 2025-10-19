@@ -64,3 +64,8 @@ variable "env" {
   type        = string
   default     = "dev"
 }
+
+variable "ingress_ip_name" {
+  description = "Name of the global static IP reserved for the HTTP(S) load balancer"
+  type        = string
+}

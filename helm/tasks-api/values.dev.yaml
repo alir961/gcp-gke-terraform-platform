@@ -58,6 +58,12 @@ prometheus:
   enabled: true
   path: /status
   port: "8080"
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+    labels:
+      release: monitoring
 
 ingress:
   enabled: true
@@ -71,13 +77,13 @@ replicaCount: 2
 
 autoscaling:
   enabled: true
-  minReplicas: 2
+  minReplicas: 1
   maxReplicas: 10
   targetCPUUtilizationPercentage: 70
 
 resources:
   requests:
-    cpu: "1"
+    cpu: "500m"
     memory: 1Gi
   limits:
     cpu: "1"

@@ -59,3 +59,7 @@ resource "google_container_node_pool" "tasks_nodes" {
     ]
   }
 }
+
+resource "google_compute_global_address" "ingress_ip" {
+  name = var.ingress_ip_name
+}

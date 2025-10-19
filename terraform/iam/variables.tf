@@ -14,8 +14,9 @@ variable "professor" {
 }
 
 variable "members" {
-  type        = map(list(string))
-  description = "Map of user emails to the list of project roles they must receive"
+  description = "Map keyed by identity type (user, group, serviceAccount, etc.) to maps of principals and their roles"
+  type        = map(map(list(string)))
+  default     = {}
 }
 
 variable "billing_account_id" {

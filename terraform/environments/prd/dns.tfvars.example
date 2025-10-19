@@ -1,0 +1,10 @@
+project_id           = "<gcp-project-id>"
+dns_managed_zone     = "<cloud-dns-zone-name>"
+record_name          = "<fqdn>"
+cluster_state_bucket = "<cluster-state-bucket>"
+cluster_state_prefix = "<cluster-state-prefix>"
+ttl                  = 60
+ingress_ip_name      = "<ingress-static-ip-name>"
+create_static_site   = true
+static_site_bucket_name = "<prod-bucket-name>"
+api_http_endpoint    = "https://api.example.com"
