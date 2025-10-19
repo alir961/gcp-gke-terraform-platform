@@ -6,19 +6,15 @@ provider "google" {
   project = var.project_id
 }
 
-data "terraform_remote_state" "cluster" {
-  backend = "gcs"
-
-  config = {
-    bucket = var.cluster_state_bucket
-    prefix = var.cluster_state_prefix
-  }
-}
-
 locals {
   fqdn                 = "${trim(var.record_name, ".")}."
   bucket_domain_suffix = ".storage.googleapis.com"
   website_bucket_name  = var.static_site_bucket_name != "" ? var.static_site_bucket_name : replace(local.fqdn, ".", "-")
+}
+
+data "google_compute_global_address" "ingress" {
+  project = var.project_id
+  name    = var.ingress_ip_name
 }
 
 resource "google_dns_record_set" "ingress" {
@@ -26,7 +22,7 @@ resource "google_dns_record_set" "ingress" {
   managed_zone = var.dns_managed_zone
   type         = var.record_type
   ttl          = var.ttl
-  rrdatas      = [data.terraform_remote_state.cluster.outputs.ingress_ip_address]
+  rrdatas      = [data.google_compute_global_address.ingress.address]
 }
 
 resource "google_storage_bucket" "static_site" {

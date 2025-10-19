@@ -35,6 +35,11 @@ variable "cluster_state_prefix" {
   type        = string
 }
 
+variable "ingress_ip_name" {
+  description = "Name of the global static IP reserved for the ingress"
+  type        = string
+}
+
 variable "create_static_site" {
   description = "Whether to create a Cloud Storage website bucket for the domain"
   type        = bool
