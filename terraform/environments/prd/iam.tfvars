@@ -34,5 +34,11 @@ members = {
       "roles/iam.securityReviewer",
     ]
   }
-  serviceAccount = {}
+  serviceAccount = {
+    "terraform-prod@example-project-prd.iam.gserviceaccount.com" = [
+      "roles/dns.admin",
+      "roles/compute.networkAdmin",
+      "roles/compute.viewer"
+    ]
+  }
 }
