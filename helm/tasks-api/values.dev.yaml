@@ -1,6 +1,7 @@
 image:
   repository: europe-west1-docker.pkg.dev/example-project-dev/tasks-registry/tasks-api
   tag: latest
+  pullPolicy: IfNotPresent
 
 app:
   environment: dev
@@ -19,8 +20,11 @@ secret:
   nameOverride: tasks-api-secret
 
 serviceAccount:
-  create: false
+  create: true
   name: tasks-api-sa
+
+rbac:
+  create: true
 
 service:
   type: ClusterIP

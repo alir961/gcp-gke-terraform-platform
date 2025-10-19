@@ -1,6 +1,7 @@
 image:
   repository: europe-west1-docker.pkg.dev/example-project-prd/tasks-registry/tasks-api
   tag: latest
+  pullPolicy: IfNotPresent
 
 app:
   environment: prod
@@ -19,8 +20,11 @@ secret:
   nameOverride: tasks-api-secret
 
 serviceAccount:
-  create: false
+  create: true
   name: tasks-api-sa
+
+rbac:
+  create: true
 
 service:
   type: ClusterIP
@@ -58,12 +62,6 @@ prometheus:
   enabled: true
   path: /status
   port: "8080"
-  serviceMonitor:
-    enabled: true
-    interval: 30s
-    scrapeTimeout: 10s
-    labels:
-      release: monitoring
   serviceMonitor:
     enabled: true
     interval: 30s

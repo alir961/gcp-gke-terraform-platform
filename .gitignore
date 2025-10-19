@@ -3,6 +3,7 @@
 *.tfstate
 *.tfstate.backup
 app/__pycache__
+app/tests/__pycache__/
 .idea
 app/.env
 # Local Terraform overrides (keep examples tracked)
