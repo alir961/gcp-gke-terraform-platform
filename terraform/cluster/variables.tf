@@ -40,7 +40,7 @@ variable "issue_client_certificate" {
 variable "machine_type" {
   description = "Machine type for the nodes"
   type        = string
-  default     = "e2-standard-4"
+  default     = "e2-medium"
 }
 
 variable "node_count" {
