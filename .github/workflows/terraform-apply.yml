@@ -3,7 +3,6 @@ name: Terraform Apply
 on:
   push:
     branches:
-      - dev
       - main
   workflow_dispatch:
     inputs:
@@ -30,13 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
     steps:
+      - name: Skip dev apply pour une exécution prod manuelle
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd'
+        run: echo "Déploiement dev ignoré (workflow déclenché pour prod)."
+
       - name: Vérifier la confirmation (manuel)
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev'
         run: |
           if [ "${{ github.event.inputs.confirmation }}" != "DEPLOY" ]; then
             echo "Vous devez saisir DEPLOY pour exécuter ce workflow."
@@ -44,21 +47,26 @@ jobs:
           fi
 
       - name: Checkout repository
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
         uses: actions/checkout@v4
 
       - name: Setup Terraform
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
         uses: hashicorp/setup-terraform@v2
 
       - name: Authenticate to Google Cloud (dev)
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_DEV }}
 
       - name: Set gcloud project (dev)
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
         run: gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
 
       - name: Terraform apply (dev)
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
         run: |
           set -euo pipefail
           for module in bootstrap iam db cluster; do
@@ -72,6 +80,7 @@ jobs:
     name: Apply Prod
     runs-on: ubuntu-latest
     environment: prd
+    needs: deploy_dev
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')

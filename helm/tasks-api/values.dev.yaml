@@ -7,9 +7,9 @@ app:
   containerPort: 8080
   livenessPath: /status
   readinessPath: /status
-  redisUrl: redis://tasks-redis.dev.svc.cluster.local:6379
+  redisUrl: ""
   db:
-    host: "10.41.0.3"
+    host: "10.17.0.3"
     port: 5432
     name: tasks_db
     user: tasks_user
@@ -26,6 +26,46 @@ service:
   type: ClusterIP
   port: 80
   targetPort: 8080
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+
+redis:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: redis
+    tag: 7.2.5-alpine
+    pullPolicy: IfNotPresent
+  externalUrl: ""
+  service:
+    type: ClusterIP
+    port: 6379
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+backendConfig:
+  enabled: true
+  healthCheck:
+    requestPath: /status
+    port: 8080
+
+prometheus:
+  enabled: true
+  path: /status
+  port: "8080"
+
+ingress:
+  enabled: true
+  host: api.dev.example-project.com
+  staticIpName: tasks-ingress-ip-dev
+  managedCertificateName: tasks-api-cert-dev
+  allowHttp: false
+  annotations: {}
 
 replicaCount: 2
 

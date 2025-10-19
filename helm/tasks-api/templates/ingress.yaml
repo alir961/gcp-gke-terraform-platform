@@ -1,0 +1,34 @@
+{{- if .Values.ingress.enabled }}
+{{- $host := required "ingress.host is required when ingress.enabled is true" .Values.ingress.host }}
+{{- $staticIP := required "ingress.staticIpName is required when ingress.enabled is true" .Values.ingress.staticIpName }}
+{{- $certificate := required "ingress.managedCertificateName is required when ingress.enabled is true" .Values.ingress.managedCertificateName }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "tasks-api.fullname" . }}
+  labels:
+    {{- include "tasks-api.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: {{ $staticIP | quote }}
+    networking.gke.io/managed-certificates: {{ $certificate | quote }}
+    {{- if hasKey .Values.ingress "allowHttp" }}
+    kubernetes.io/ingress.allow-http: {{ .Values.ingress.allowHttp | quote }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: gce
+  rules:
+    - host: {{ $host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "tasks-api.fullname" . }}
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}

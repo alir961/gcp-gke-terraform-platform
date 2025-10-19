@@ -1,6 +1,3 @@
-# gcloud container clusters get-credentials tasks-cluster --zone <ZONE> --project <PROJECT> avant terraform apply
-# helm package tasks-redis & helm package tasks-api avant terraform apply à /helm
-
 data "google_client_config" "default" {}
 
 provider "kubernetes" {
@@ -33,21 +30,6 @@ resource "helm_release" "tasks_api" {
   values = [
     file("../../helm/tasks-api/values.${var.env}.yaml")
   ]
-  wait            = false
-  timeout         = 300
-  atomic          = false
-  cleanup_on_fail = false
-}
-
-resource "helm_release" "tasks_redis" {
-  depends_on = [helm_release.tasks_api]
-  name       = "tasks-redis"
-  chart      = "../../helm/tasks-redis"
-  namespace  = var.env
-  values = [
-    file("../../helm/tasks-redis/values.${var.env}.yaml")
-  ]
-
   wait            = false
   timeout         = 300
   atomic          = false

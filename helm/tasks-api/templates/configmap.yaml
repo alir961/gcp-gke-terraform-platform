@@ -1,6 +1,16 @@
 {{- $dbHost := required "app.db.host is required" .Values.app.db.host -}}
 {{- $dbUser := required "app.db.user is required" .Values.app.db.user -}}
-{{- $redisUrl := required "app.redisUrl is required" .Values.app.redisUrl -}}
+{{- $redisUrl := "" -}}
+{{- if .Values.redis.enabled }}
+  {{- $serviceName := printf "%s-redis" (include "tasks-api.fullname" .) -}}
+  {{- $redisUrl = printf "redis://%s.%s.svc.cluster.local:%d" $serviceName .Release.Namespace (int .Values.redis.service.port) -}}
+{{- else if .Values.redis.externalUrl }}
+  {{- $redisUrl = .Values.redis.externalUrl -}}
+{{- else if .Values.app.redisUrl }}
+  {{- $redisUrl = .Values.app.redisUrl -}}
+{{- else }}
+  {{- fail "Redis is disabled; provide redis.externalUrl or app.redisUrl" -}}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

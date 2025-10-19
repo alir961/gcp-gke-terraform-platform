@@ -3,8 +3,13 @@ name: Terraform Plan
 on:
   pull_request:
     branches:
-      - dev
       - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environnement à planifier (dev ou prd)"
+        required: false
+        default: "both"
 
 permissions:
   contents: read
@@ -40,11 +45,14 @@ jobs:
           terraform -chdir=terraform/iam validate -no-color
 
   plan_dev:
-    name: Plan Dev
+    name: Terraform Plan Dev
     needs: fmt_validate
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.environment == 'dev' || github.event.inputs.environment == 'both'))
     environment: dev
-    if: github.base_ref == 'dev'
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
     strategy:
@@ -79,11 +87,14 @@ jobs:
           path: terraform/${{ matrix.module }}/tfplan-dev
 
   plan_prd:
-    name: Plan Prd
+    name: Terraform Plan Prod
     needs: fmt_validate
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.environment == 'prd' || github.event.inputs.environment == 'both'))
     environment: prd
-    if: github.base_ref == 'main'
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
     strategy:

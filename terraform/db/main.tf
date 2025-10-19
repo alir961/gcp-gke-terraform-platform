@@ -1,3 +1,7 @@
+locals {
+  private_ip_name = var.gcp_project == "example-project-prd" ? "tasks-db-private-ip-prd" : "tasks-db-private-ip"
+}
+
 resource "google_project_service" "service_networking" {
   service = "servicenetworking.googleapis.com"
 }
@@ -7,7 +11,7 @@ resource "google_project_service" "secret_manager" {
 }
 
 resource "google_compute_global_address" "private_ip_address" {
-  name          = "tasks-db-private-ip"
+  name          = local.private_ip_name
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 16
@@ -18,10 +22,6 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   network                 = var.vpc_network
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
-
-  lifecycle {
-    create_before_destroy = true
-  }
 
   depends_on = [
     google_project_service.service_networking
