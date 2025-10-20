@@ -50,6 +50,8 @@ It covers workflows for initialization, planning, applying, and destroying infra
 | `TF_VAR_app_secret_key` | Clé secrète FastAPI (JWT) synchronisée via Secret Manager |
 
 > ℹ️ **Documentation soutenance** : préciser que prod est déployé après merge sur `main` (avec validation éventuelle côté environnement GitHub) et qu’un workflow manuel existe pour rejouer un apply si besoin.
+> ⚠️ **Limites IAM GCP** : les rôles `roles/owner` et `roles/billing.admin` se gèrent hors Terraform (console GCP / commande `gcloud`). GCP impose une invitation manuelle pour les owners et n’autorise pas `roles/billing.*` au niveau projet. L’équipe conserve donc des rôles techniques (`roles/editor`, `container.admin`, `dns.admin`, etc.) et les owners existants ne sont pas pilotés par Terraform.
+> ⚠️ **Réseau Cloud SQL** : tant que l’instance PostgreSQL existe, la connexion Service Networking liée au VPC historique `vpc-network` ne peut pas être supprimée. Les `tfvars` dev restent donc pointés sur ce réseau. Toute migration vers `iac-dev-vpc` devra recréer la base.
 
 ---
 
