@@ -7,6 +7,6 @@ vpc_network_id           = "projects/example-project-prd/global/networks/iac-prd
 subnet_id                = "projects/example-project-prd/regions/europe-west1/subnetworks/iac-prd-vpc-subnet"
 remove_default_node_pool = true
 issue_client_certificate = false
-node_count               = 2
+node_count               = 4
 env                      = "prd"
 ingress_ip_name          = "tasks-ingress-ip"
