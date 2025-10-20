@@ -6,6 +6,18 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(google_container_cluster.tasks_cluster.master_auth[0].cluster_ca_certificate)
 }
 
+data "google_secret_manager_secret_version" "db_password" {
+  project = var.project_id
+  secret  = "tasks-db-password"
+  version = "latest"
+}
+
+data "google_secret_manager_secret_version" "app_secret_key" {
+  project = var.project_id
+  secret  = "tasks-api-secret-key"
+  version = "latest"
+}
+
 resource "kubernetes_namespace" "env" {
   depends_on = [google_container_cluster.tasks_cluster]
 
@@ -38,6 +50,26 @@ resource "helm_release" "tasks_api" {
   values = [
     file("../../helm/tasks-api/values.${var.env}.yaml")
   ]
+  set {
+    name  = "secret.create"
+    value = "true"
+  }
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+  set {
+    name  = "rbac.create"
+    value = "true"
+  }
+  set_sensitive {
+    name  = "app.db.password"
+    value = data.google_secret_manager_secret_version.db_password.secret_data
+  }
+  set_sensitive {
+    name  = "app.secretKey"
+    value = data.google_secret_manager_secret_version.app_secret_key.secret_data
+  }
   wait            = false
   timeout         = 300
   atomic          = false

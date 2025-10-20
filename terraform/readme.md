@@ -35,7 +35,8 @@ It covers workflows for initialization, planning, applying, and destroying infra
 - Workflow : `.github/workflows/terraform-destroy.yml`
 - Déclencheur : `Actions → Terraform Destroy → Run workflow`.
 - Paramètres : `environment` (`dev` ou `prd`) + confirmation `DESTROY`.
-- Chaîne : destroy `cluster → db → iam → bootstrap`, avec authentification OIDC identique aux autres workflows.
+- Paramètre optionnel `destroy_bootstrap` (`false` par défaut) : passer à `true` uniquement si vous souhaitez supprimer le module `bootstrap` (et donc le bucket de state).
+- Chaîne : destroy `dns → cluster → db → iam` (et `bootstrap` uniquement si `destroy_bootstrap=true`), avec authentification OIDC identique aux autres workflows.
 
 ### Secrets GitHub à définir (environnements)
 | Secret | Valeur |
@@ -45,6 +46,8 @@ It covers workflows for initialization, planning, applying, and destroying infra
 | `GCP_WORKLOAD_IDENTITY_PROVIDER_DEV` / `PRD` | Identifiants complets des providers OIDC |
 | `TF_BUCKET_DEV` / `PRD` | Buckets de state |
 | `TF_BILLING_ACCOUNT` | `XXXXXX-XXXXXX-XXXXXX` (optionnel mais recommandé) |
+| `TF_VAR_db_password` | Mot de passe Postgres injecté dans Secret Manager & Kubernetes |
+| `TF_VAR_app_secret_key` | Clé secrète FastAPI (JWT) synchronisée via Secret Manager |
 
 > ℹ️ **Documentation soutenance** : préciser que prod est déployé après merge sur `main` (avec validation éventuelle côté environnement GitHub) et qu’un workflow manuel existe pour rejouer un apply si besoin.
 

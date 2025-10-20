@@ -18,3 +18,9 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "app_secret_key" {
+  description = "Secret key for signing API JWT tokens"
+  type        = string
+  sensitive   = true
+}

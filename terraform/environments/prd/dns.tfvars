@@ -5,6 +5,6 @@ cluster_state_bucket    = "example-project-prd-tfstate"
 cluster_state_prefix    = "cluster/prd"
 ttl                     = 60
 ingress_ip_name         = "tasks-ingress-ip"
-create_static_site      = false
+create_static_site      = true
 static_site_bucket_name = "example-project-com"
 api_http_endpoint       = "https://api.example-project.com"

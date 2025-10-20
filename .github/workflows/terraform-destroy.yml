@@ -11,6 +11,10 @@ on:
         description: 'Tapez "DESTROY" pour confirmer la destruction Terraform'
         required: true
         default: "NO"
+      destroy_bootstrap:
+        description: "Inclure le module bootstrap (supprime le bucket de state) ? true/false"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -33,6 +37,12 @@ jobs:
             echo "L'environnement doit être dev ou prd."
             exit 1
           fi
+      - name: Vérifier destroy_bootstrap
+        run: |
+          if [ "${{ github.event.inputs.destroy_bootstrap }}" != "true" ] && [ "${{ github.event.inputs.destroy_bootstrap }}" != "false" ] && [ -n "${{ github.event.inputs.destroy_bootstrap }}" ]; then
+            echo "destroy_bootstrap doit valoir true ou false."
+            exit 1
+          fi
 
   destroy:
     name: Terraform Destroy
@@ -41,6 +51,7 @@ jobs:
     environment: ${{ github.event.inputs.environment }}
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+      TF_VAR_app_secret_key: ${{ secrets.TF_VAR_app_secret_key }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -73,9 +84,18 @@ jobs:
             TFVARS_DIR=../environments/prd
           fi
 
-          for module in dns cluster db iam bootstrap; do
+          for module in dns cluster db iam; do
             echo "::group::Terraform destroy ${{ github.event.inputs.environment }} - ${module}"
             terraform -chdir=terraform/${module} init -input=false -backend-config=${BACKEND}
             terraform -chdir=terraform/${module} destroy -input=false -auto-approve -var-file=${TFVARS_DIR}/${module}.tfvars
             echo "::endgroup::"
           done
+
+          if [ "${{ github.event.inputs.destroy_bootstrap }}" = "true" ]; then
+            echo "::group::Terraform destroy ${{ github.event.inputs.environment }} - bootstrap"
+            terraform -chdir=terraform/bootstrap init -input=false -backend-config=${BACKEND}
+            terraform -chdir=terraform/bootstrap destroy -input=false -auto-approve -var-file=${TFVARS_DIR}/bootstrap.tfvars
+            echo "::endgroup::"
+          else
+            echo "Module bootstrap conservé (bucket de state préservé)."
+          fi

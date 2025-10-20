@@ -49,6 +49,27 @@ resource "google_secret_manager_secret_version" "db_password_secret_version" {
   ]
 }
 
+resource "google_secret_manager_secret" "app_secret_key" {
+  secret_id = "tasks-api-secret-key"
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [
+    google_project_service.secret_manager
+  ]
+}
+
+resource "google_secret_manager_secret_version" "app_secret_key_version" {
+  secret      = google_secret_manager_secret.app_secret_key.id
+  secret_data = var.app_secret_key
+
+  depends_on = [
+    google_project_service.secret_manager
+  ]
+}
+
 resource "google_sql_database_instance" "tasks_postgres" {
   name                = "tasks-db"
   database_version    = "POSTGRES_16"

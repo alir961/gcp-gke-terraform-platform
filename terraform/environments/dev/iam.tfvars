@@ -6,55 +6,50 @@ billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
 members = {
   user = {
     "member-4@example.com" = [
-      "roles/viewer",
-      "roles/container.admin",
-      "roles/artifactregistry.writer",
-      "roles/cloudsql.admin",
-      "roles/dns.admin",
-      "roles/storage.objectAdmin",
+      "roles/owner",
     ]
     "member-3@example.com" = [
-      "roles/viewer",
-      "roles/container.admin",
-      "roles/artifactregistry.writer",
-      "roles/cloudsql.admin",
-      "roles/dns.admin",
-      "roles/storage.objectAdmin",
+      "roles/owner",
     ]
     "member-2@example.com" = [
-      "roles/viewer",
-      "roles/container.admin",
-      "roles/artifactregistry.writer",
-      "roles/cloudsql.admin",
-      "roles/dns.admin",
-      "roles/storage.objectAdmin",
+      "roles/owner",
     ]
     "member-1@example.com" = [
-      "roles/viewer",
-      "roles/container.admin",
-      "roles/artifactregistry.writer",
-      "roles/cloudsql.admin",
-      "roles/dns.admin",
-      "roles/storage.objectAdmin",
+      "roles/owner",
     ]
     "teacher@example.com" = [
       "roles/viewer",
+      "roles/billing.viewer",
       "roles/iam.securityReviewer",
       "roles/compute.viewer",
       "roles/container.viewer",
-      "roles/dns.admin",
+      "roles/dns.reader",
+      "roles/logging.viewer",
+      "roles/monitoring.viewer",
     ]
   }
   serviceAccount = {
     "github-actions-sa@example-project-dev.iam.gserviceaccount.com" = [
-      "roles/dns.admin",
+      "roles/billing.admin",
+      "roles/cloudsql.admin",
       "roles/compute.networkAdmin",
-      "roles/storage.objectAdmin",
+      "roles/container.admin",
+      "roles/dns.admin",
+      "roles/resourcemanager.projectIamAdmin",
+      "roles/secretmanager.admin",
+      "roles/servicenetworking.networksAdmin",
+      "roles/storage.admin",
     ]
     "github-actions-ci-cd@example-project-dev.iam.gserviceaccount.com" = [
-      "roles/dns.admin",
+      "roles/billing.admin",
+      "roles/cloudsql.admin",
       "roles/compute.networkAdmin",
-      "roles/storage.objectAdmin",
+      "roles/container.admin",
+      "roles/dns.admin",
+      "roles/resourcemanager.projectIamAdmin",
+      "roles/secretmanager.admin",
+      "roles/servicenetworking.networksAdmin",
+      "roles/storage.admin",
     ]
   }
 }
