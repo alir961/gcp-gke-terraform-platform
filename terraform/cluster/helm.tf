@@ -50,26 +50,30 @@ resource "helm_release" "tasks_api" {
   values = [
     file("../../helm/tasks-api/values.${var.env}.yaml")
   ]
-  set {
-    name  = "secret.create"
-    value = "true"
-  }
-  set {
-    name  = "serviceAccount.create"
-    value = "true"
-  }
-  set {
-    name  = "rbac.create"
-    value = "true"
-  }
-  set_sensitive {
-    name  = "app.db.password"
-    value = data.google_secret_manager_secret_version.db_password.secret_data
-  }
-  set_sensitive {
-    name  = "app.secretKey"
-    value = data.google_secret_manager_secret_version.app_secret_key.secret_data
-  }
+  set = [
+    {
+      name  = "secret.create"
+      value = "true"
+    },
+    {
+      name  = "serviceAccount.create"
+      value = "true"
+    },
+    {
+      name  = "rbac.create"
+      value = "true"
+    }
+  ]
+  set_sensitive = [
+    {
+      name  = "app.db.password"
+      value = data.google_secret_manager_secret_version.db_password.secret_data
+    },
+    {
+      name  = "app.secretKey"
+      value = data.google_secret_manager_secret_version.app_secret_key.secret_data
+    }
+  ]
   wait            = false
   timeout         = 300
   atomic          = false
