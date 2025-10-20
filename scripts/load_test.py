@@ -11,22 +11,25 @@ import argparse
 import asyncio
 import os
 import time
+from datetime import datetime, timedelta
 
 import httpx
+import jwt
 
 
 async def worker(
     name: int,
     client: httpx.AsyncClient,
     token: str,
+    path: str,
     stop_event: asyncio.Event,
     stats: dict,
 ) -> None:
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     while not stop_event.is_set():
         start = time.perf_counter()
         try:
-            response = await client.get("/tasks", headers=headers, timeout=10.0)
+            response = await client.get(path, headers=headers, timeout=10.0)
             latency = time.perf_counter() - start
             status = response.status_code
         except Exception:
@@ -43,6 +46,11 @@ async def main() -> None:
         description="Simple async load tester for the Tasks API"
     )
     parser.add_argument(
+        "--env",
+        choices=["dev", "prod"],
+        help="Shortcut to pre-fill host (and default path=/status).",
+    )
+    parser.add_argument(
         "--host",
         default=os.getenv("LOADTEST_HOST", "http://localhost:8080"),
         help="Base URL of the API",
@@ -51,6 +59,16 @@ async def main() -> None:
         "--token",
         default=os.getenv("LOADTEST_TOKEN", ""),
         help="JWT token for Authorization header",
+    )
+    parser.add_argument(
+        "--path",
+        default=os.getenv("LOADTEST_PATH", "/tasks"),
+        help="API path to target (ex: /status)",
+    )
+    parser.add_argument(
+        "--secret",
+        default=os.getenv("LOADTEST_SECRET") or os.getenv("SECRET_KEY", ""),
+        help="Secret used to mint a short-lived JWT when --token is omitted",
     )
     parser.add_argument(
         "--concurrency",
@@ -66,17 +84,47 @@ async def main() -> None:
     )
     args = parser.parse_args()
 
-    if not args.token:
-        raise SystemExit(
-            "Provide a JWT token via --token or LOADTEST_TOKEN environment variable."
-        )
+    if args.env:
+        presets = {
+            "dev": {
+                "host": "https://api.dev.example-project.com",
+                "path": "/status",
+            },
+            "prod": {
+                "host": "https://api.example-project.com",
+                "path": "/status",
+            },
+        }
+        preset = presets[args.env]
+        if args.host == parser.get_default("host"):
+            args.host = preset["host"]
+        if args.path == parser.get_default("path"):
+            args.path = preset["path"]
+
+    needs_auth = args.path != "/status"
+    token = args.token
+    generated_token = False
+    if needs_auth and not token:
+        if not args.secret:
+            raise SystemExit(
+                "Provide --token or configure --secret/LOADTEST_SECRET to mint a JWT."
+            )
+        payload = {
+            "sub": "loadtest",
+            "iat": int(time.time()),
+            "exp": int((datetime.utcnow() + timedelta(hours=1)).timestamp()),
+        }
+        token = jwt.encode(payload, args.secret, algorithm="HS256")
+        generated_token = True
+    if not needs_auth:
+        token = ""
 
     stats = {"count": 0, "latency_sum": 0.0, "hits": {}, "lock": asyncio.Lock()}
     stop_event = asyncio.Event()
 
     async with httpx.AsyncClient(base_url=args.host, timeout=10.0) as client:
         tasks = [
-            asyncio.create_task(worker(i, client, args.token, stop_event, stats))
+            asyncio.create_task(worker(i, client, token, args.path, stop_event, stats))
             for i in range(args.concurrency)
         ]
 
@@ -86,6 +134,8 @@ async def main() -> None:
 
     total = stats["count"]
     avg_latency = (stats["latency_sum"] / total) if total else 0
+    if generated_token:
+        print("Generated JWT on the fly using provided secret.")
     print(f"Total requests: {total}")
     print(f"Average latency: {avg_latency * 1000:.2f} ms")
     print("Status codes:")
