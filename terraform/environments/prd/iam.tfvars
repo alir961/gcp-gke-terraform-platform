@@ -6,20 +6,51 @@ billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
 members = {
   user = {
     "member-4@example.com" = [
-      "roles/owner",
+      "roles/editor",
+      "roles/artifactregistry.writer",
+      "roles/cloudsql.admin",
+      "roles/container.admin",
+      "roles/dns.admin",
+      "roles/logging.admin",
+      "roles/monitoring.admin",
+      "roles/secretmanager.admin",
+      "roles/storage.admin",
     ]
     "member-3@example.com" = [
-      "roles/owner",
+      "roles/editor",
+      "roles/artifactregistry.writer",
+      "roles/cloudsql.admin",
+      "roles/container.admin",
+      "roles/dns.admin",
+      "roles/logging.admin",
+      "roles/monitoring.admin",
+      "roles/secretmanager.admin",
+      "roles/storage.admin",
     ]
     "member-2@example.com" = [
-      "roles/owner",
+      "roles/editor",
+      "roles/artifactregistry.writer",
+      "roles/cloudsql.admin",
+      "roles/container.admin",
+      "roles/dns.admin",
+      "roles/logging.admin",
+      "roles/monitoring.admin",
+      "roles/secretmanager.admin",
+      "roles/storage.admin",
     ]
     "member-1@example.com" = [
-      "roles/owner",
+      "roles/editor",
+      "roles/artifactregistry.writer",
+      "roles/cloudsql.admin",
+      "roles/container.admin",
+      "roles/dns.admin",
+      "roles/logging.admin",
+      "roles/monitoring.admin",
+      "roles/secretmanager.admin",
+      "roles/storage.admin",
     ]
     "teacher@example.com" = [
       "roles/viewer",
-      "roles/billing.viewer",
       "roles/iam.securityReviewer",
       "roles/compute.viewer",
       "roles/container.viewer",
@@ -30,7 +61,6 @@ members = {
   }
   serviceAccount = {
     "github-actions-sa@example-project-prd.iam.gserviceaccount.com" = [
-      "roles/billing.admin",
       "roles/cloudsql.admin",
       "roles/compute.networkAdmin",
       "roles/container.admin",

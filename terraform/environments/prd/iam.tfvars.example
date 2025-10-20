@@ -6,10 +6,26 @@ billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
 members = {
   user = {
     "student.one@example.com" = [
-      "roles/owner",
+      "roles/editor",
+      "roles/artifactregistry.writer",
+      "roles/cloudsql.admin",
+      "roles/container.admin",
+      "roles/dns.admin",
+      "roles/logging.admin",
+      "roles/monitoring.admin",
+      "roles/secretmanager.admin",
+      "roles/storage.admin",
     ]
     "student.two@example.com" = [
-      "roles/owner",
+      "roles/editor",
+      "roles/artifactregistry.writer",
+      "roles/cloudsql.admin",
+      "roles/container.admin",
+      "roles/dns.admin",
+      "roles/logging.admin",
+      "roles/monitoring.admin",
+      "roles/secretmanager.admin",
+      "roles/storage.admin",
     ]
     "prof@example.com" = [
       "roles/viewer",
