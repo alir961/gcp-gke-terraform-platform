@@ -18,6 +18,25 @@ data "google_secret_manager_secret_version" "app_secret_key" {
   version = "latest"
 }
 
+resource "kubernetes_secret" "tasks_api" {
+  depends_on = [kubernetes_namespace.env]
+
+  metadata {
+    name      = "tasks-api-secret"
+    namespace = var.env
+    labels = {
+      "app.kubernetes.io/name"       = "tasks-api"
+      "app.kubernetes.io/instance"   = "tasks-api"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+
+  string_data = {
+    DB_PASS    = data.google_secret_manager_secret_version.db_password.secret_data
+    SECRET_KEY = data.google_secret_manager_secret_version.app_secret_key.secret_data
+  }
+}
+
 resource "kubernetes_namespace" "env" {
   depends_on = [google_container_cluster.tasks_cluster]
 
@@ -49,30 +68,6 @@ resource "helm_release" "tasks_api" {
   namespace  = var.env
   values = [
     file("../../helm/tasks-api/values.${var.env}.yaml")
-  ]
-  set = [
-    {
-      name  = "secret.create"
-      value = "true"
-    },
-    {
-      name  = "serviceAccount.create"
-      value = "true"
-    },
-    {
-      name  = "rbac.create"
-      value = "true"
-    }
-  ]
-  set_sensitive = [
-    {
-      name  = "app.db.password"
-      value = data.google_secret_manager_secret_version.db_password.secret_data
-    },
-    {
-      name  = "app.secretKey"
-      value = data.google_secret_manager_secret_version.app_secret_key.secret_data
-    }
   ]
   wait            = false
   timeout         = 300
