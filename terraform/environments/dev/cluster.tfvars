@@ -1,12 +1,12 @@
 project_id               = "example-project-dev"
-region                   = "europe-west1"
-zone                     = "europe-west1-b"
+region                   = "europe-west9"
+zone                     = "europe-west9-b"
 bucket_name              = "example-project-dev-tfstate"
 prefix                   = "bootstrap/dev"
 vpc_network_id           = "projects/example-project-dev/global/networks/vpc-network"
 subnet_id                = "projects/example-project-dev/regions/europe-west9/subnetworks/vpc-network-subnet"
 remove_default_node_pool = true
 issue_client_certificate = true
-node_count               = 1
+node_count               = 2
 env                      = "dev"
 ingress_ip_name          = "tasks-ingress-ip-dev"
