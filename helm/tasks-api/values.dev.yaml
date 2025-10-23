@@ -20,7 +20,7 @@ secret:
   nameOverride: tasks-api-secret
 
 serviceAccount:
-  create: false
+  create: true
   name: tasks-api-sa
 
 rbac:
