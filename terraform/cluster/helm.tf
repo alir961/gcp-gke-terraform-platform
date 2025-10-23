@@ -43,6 +43,10 @@ resource "kubernetes_namespace" "env" {
   metadata {
     name = var.env
   }
+
+  timeouts {
+    delete = "15m"
+  }
 }
 
 resource "kubernetes_namespace" "monitoring" {
@@ -50,6 +54,10 @@ resource "kubernetes_namespace" "monitoring" {
 
   metadata {
     name = "${var.env}-monitoring"
+  }
+
+  timeouts {
+    delete = "15m"
   }
 }
 
