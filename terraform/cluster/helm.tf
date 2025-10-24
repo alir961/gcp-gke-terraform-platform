@@ -18,6 +18,18 @@ data "google_secret_manager_secret_version" "app_secret_key" {
   version = "latest"
 }
 
+locals {
+  tasks_api_dynamic_values = yamlencode({
+    app = {
+      db = {
+        host = data.terraform_remote_state.db.outputs.db_private_ip
+        name = data.terraform_remote_state.db.outputs.db_name
+        user = data.terraform_remote_state.db.outputs.db_user
+      }
+    }
+  })
+}
+
 resource "kubernetes_secret" "tasks_api" {
   depends_on = [kubernetes_namespace.env]
 
@@ -79,7 +91,8 @@ resource "helm_release" "tasks_api" {
   chart     = "../../helm/tasks-api"
   namespace = var.env
   values = [
-    file("../../helm/tasks-api/values.${var.env}.yaml")
+    file("../../helm/tasks-api/values.${var.env}.yaml"),
+    local.tasks_api_dynamic_values
   ]
   wait            = false
   timeout         = 300

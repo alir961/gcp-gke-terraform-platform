@@ -99,6 +99,10 @@ resource "google_sql_user" "tasks_user" {
   name     = "tasks_user"
   instance = google_sql_database_instance.tasks_postgres.name
   password = var.db_password
+
+  depends_on = [
+    google_sql_database.tasks_db
+  ]
 }
 
 resource "google_sql_database" "tasks_db" {
