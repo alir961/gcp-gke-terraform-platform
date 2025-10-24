@@ -44,10 +44,58 @@ jobs:
             exit 1
           fi
 
+  cleanup_before_destroy:
+    name: Cleanup Namespaces Before Destroy
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: guard
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ github.event.inputs.environment == 'dev' && secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
+          service_account: ${{ github.event.inputs.environment == 'dev' && secrets.GCP_SERVICE_ACCOUNT_DEV || secrets.GCP_SERVICE_ACCOUNT_PRD }}
+
+      - name: Configure kubectl
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+            gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
+            gcloud container clusters get-credentials tasks-cluster --zone europe-west9-b --project ${{ secrets.GCP_PROJECT_DEV }}
+          else
+            gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
+            gcloud container clusters get-credentials tasks-cluster --zone europe-west1-b --project ${{ secrets.GCP_PROJECT_PRD }}
+          fi
+
+      - name: Remove namespace finalizers
+        shell: bash
+        run: |
+          set +e
+          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+            namespaces=(dev dev-monitoring)
+          else
+            namespaces=(prd prd-monitoring)
+          fi
+
+          for ns in "${namespaces[@]}"; do
+            if kubectl get namespace "$ns" >/dev/null 2>&1; then
+              if kubectl get namespace "$ns" -o jsonpath='{.spec.finalizers}' 2>/dev/null | grep -q 'kubernetes'; then
+                echo "Removing finalizers from namespace $ns"
+                kubectl get namespace "$ns" -o json | jq 'del(.spec.finalizers)' > /tmp/$ns.json
+                kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f /tmp/$ns.json || true
+              fi
+            fi
+          done
+          set -e
+
   destroy:
     name: Terraform Destroy
     runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
-    needs: guard
+    needs: [guard, cleanup_before_destroy]
     environment: ${{ github.event.inputs.environment }}
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
