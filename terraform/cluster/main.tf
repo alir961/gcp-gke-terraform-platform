@@ -17,9 +17,19 @@ data "terraform_remote_state" "bootstrap" {
   }
 }
 
+data "terraform_remote_state" "db" {
+  backend = "gcs"
+
+  config = {
+    bucket = var.bucket_name
+    prefix = local.db_state_prefix
+  }
+}
+
 locals {
-  vpc_network_id = var.vpc_network_id != "" ? var.vpc_network_id : data.terraform_remote_state.bootstrap.outputs.vpc_id
-  subnet_id      = var.subnet_id != "" ? var.subnet_id : data.terraform_remote_state.bootstrap.outputs.subnet_id
+  vpc_network_id  = var.vpc_network_id != "" ? var.vpc_network_id : data.terraform_remote_state.bootstrap.outputs.vpc_id
+  subnet_id       = var.subnet_id != "" ? var.subnet_id : data.terraform_remote_state.bootstrap.outputs.subnet_id
+  db_state_prefix = replace(var.prefix, "bootstrap", "db")
 }
 
 resource "google_container_cluster" "tasks_cluster" {
