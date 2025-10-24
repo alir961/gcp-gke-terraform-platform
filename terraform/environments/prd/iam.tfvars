@@ -70,5 +70,11 @@ members = {
       "roles/servicenetworking.networksAdmin",
       "roles/storage.admin",
     ]
+    "github-actions-sa@example-project-dev.iam.gserviceaccount.com" = [
+      "roles/dns.admin",
+    ]
+    "github-actions-ci-cd@example-project-dev.iam.gserviceaccount.com" = [
+      "roles/dns.admin",
+    ]
   }
 }
