@@ -148,3 +148,43 @@ jobs:
           else
             echo "Module bootstrap conservé (bucket de state préservé)."
           fi
+
+  cleanup_after_destroy:
+    if: always()
+    name: Cleanup Namespaces After Destroy
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    environment: ${{ github.event.inputs.environment }}
+    needs: destroy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ github.event.inputs.environment == 'dev' && secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
+          service_account: ${{ github.event.inputs.environment == 'dev' && secrets.GCP_SERVICE_ACCOUNT_DEV || secrets.GCP_SERVICE_ACCOUNT_PRD }}
+
+      - name: Configure kubectl
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+            gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
+            gcloud container clusters get-credentials tasks-cluster --zone europe-west9-b --project ${{ secrets.GCP_PROJECT_DEV }}
+            namespaces=(dev dev-monitoring)
+          else
+            gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
+            gcloud container clusters get-credentials tasks-cluster --zone europe-west1-b --project ${{ secrets.GCP_PROJECT_PRD }}
+            namespaces=(prd prd-monitoring)
+          fi
+          for ns in "${namespaces[@]}"; do
+            if kubectl get namespace "$ns" >/dev/null 2>&1; then
+              if kubectl get namespace "$ns" -o jsonpath='{.spec.finalizers}' 2>/dev/null | grep -q 'kubernetes'; then
+                echo "Removing finalizers from namespace $ns"
+                kubectl get namespace "$ns" -o json | jq 'del(.spec.finalizers)' > /tmp/$ns.json
+                kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f /tmp/$ns.json || true
+              fi
+            fi
+          done
