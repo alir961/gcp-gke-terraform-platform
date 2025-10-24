@@ -47,6 +47,7 @@ jobs:
   cleanup_before_destroy:
     name: Cleanup Namespaces Before Destroy
     runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    environment: ${{ github.event.inputs.environment }}
     needs: guard
     steps:
       - name: Checkout repository
