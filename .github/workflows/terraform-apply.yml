@@ -53,8 +53,9 @@ jobs:
       - name: Run API tests
         run: python -m pytest app/tests
 
-  cleanup_namespaces:
-    name: Cleanup Namespaces
+  cleanup_dev:
+    name: Cleanup Namespaces (dev)
+    environment: dev
     runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     needs: tests
     steps:
@@ -64,7 +65,7 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Authenticate to Google Cloud (dev)
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV }}
@@ -75,7 +76,7 @@ jobs:
           gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
           gcloud container clusters get-credentials tasks-cluster --zone europe-west9-b --project ${{ secrets.GCP_PROJECT_DEV }}
 
-      - name: Remove namespace finalizers (dev)
+      - name: Remove namespace finalizers
         shell: bash
         run: |
           set +e
@@ -89,19 +90,30 @@ jobs:
             fi
           done
           set -e
+  cleanup_prd:
+    name: Cleanup Namespaces (prd)
+    environment: prd
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud (prod)
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_PRD }}
 
-      - name: Ensure kubectl access (prod)
+      - name: Ensure kubectl access
         run: |
           gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
           gcloud container clusters get-credentials tasks-cluster --zone europe-west1-b --project ${{ secrets.GCP_PROJECT_PRD }}
 
-      - name: Remove namespace finalizers (prod)
+      - name: Remove namespace finalizers
         shell: bash
         run: |
           set +e
@@ -120,7 +132,7 @@ jobs:
     name: Apply Dev
     runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     environment: dev
-    needs: cleanup_namespaces
+    needs: cleanup_dev
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       github.event_name == 'workflow_dispatch'
@@ -174,7 +186,7 @@ jobs:
     name: Apply Prod
     runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     environment: prd
-    needs: [tests, deploy_dev]
+    needs: [tests, cleanup_prd, deploy_dev]
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
