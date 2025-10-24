@@ -1,4 +1,5 @@
 project_id              = "example-project-dev"
+dns_project_id          = "example-project-prd"
 dns_managed_zone        = "example-project-com"
 record_name             = "api.dev.example-project.com"
 cluster_state_bucket    = "example-project-dev-tfstate"

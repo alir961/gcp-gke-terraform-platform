@@ -6,6 +6,11 @@ provider "google" {
   project = var.project_id
 }
 
+provider "google" {
+  alias   = "dns"
+  project = var.dns_project_id != "" ? var.dns_project_id : var.project_id
+}
+
 locals {
   fqdn                 = "${trim(var.record_name, ".")}."
   bucket_domain_suffix = ".storage.googleapis.com"
@@ -18,6 +23,7 @@ data "google_compute_global_address" "ingress" {
 }
 
 resource "google_dns_record_set" "ingress" {
+  provider     = google.dns
   name         = local.fqdn
   managed_zone = var.dns_managed_zone
   type         = var.record_type
