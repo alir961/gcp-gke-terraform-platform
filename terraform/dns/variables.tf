@@ -3,6 +3,12 @@ variable "project_id" {
   type        = string
 }
 
+variable "dns_project_id" {
+  description = "Optional override for the Cloud DNS project (defaults to project_id)"
+  type        = string
+  default     = ""
+}
+
 variable "dns_managed_zone" {
   description = "Existing Cloud DNS managed zone name"
   type        = string

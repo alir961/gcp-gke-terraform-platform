@@ -32,8 +32,8 @@ resource "kubernetes_secret" "tasks_api" {
   }
 
   data = {
-    DB_PASS    = base64encode(data.google_secret_manager_secret_version.db_password.secret_data)
-    SECRET_KEY = base64encode(data.google_secret_manager_secret_version.app_secret_key.secret_data)
+    DB_PASS    = data.google_secret_manager_secret_version.db_password.secret_data
+    SECRET_KEY = data.google_secret_manager_secret_version.app_secret_key.secret_data
   }
 }
 
