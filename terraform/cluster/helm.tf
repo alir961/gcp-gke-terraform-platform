@@ -75,9 +75,9 @@ resource "helm_release" "tasks_api" {
     google_compute_global_address.ingress_ip,
     helm_release.monitoring
   ]
-  name       = "tasks-api"
-  chart      = "../../helm/tasks-api"
-  namespace  = var.env
+  name      = "tasks-api"
+  chart     = "../../helm/tasks-api"
+  namespace = var.env
   values = [
     file("../../helm/tasks-api/values.${var.env}.yaml")
   ]
