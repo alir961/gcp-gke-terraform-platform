@@ -70,7 +70,11 @@ provider "helm" {
 }
 
 resource "helm_release" "tasks_api" {
-  depends_on = [google_container_cluster.tasks_cluster, google_compute_global_address.ingress_ip]
+  depends_on = [
+    google_container_cluster.tasks_cluster,
+    google_compute_global_address.ingress_ip,
+    helm_release.monitoring
+  ]
   name       = "tasks-api"
   chart      = "../../helm/tasks-api"
   namespace  = var.env
