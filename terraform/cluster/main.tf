@@ -31,7 +31,7 @@ resource "google_container_cluster" "tasks_cluster" {
 
   network             = local.vpc_network_id
   subnetwork          = local.subnet_id
-  deletion_protection = true
+  deletion_protection = false
 
   master_auth {
     client_certificate_config {
