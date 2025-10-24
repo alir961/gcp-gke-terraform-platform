@@ -53,11 +53,74 @@ jobs:
       - name: Run API tests
         run: python -m pytest app/tests
 
+  cleanup_namespaces:
+    name: Cleanup Namespaces
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Authenticate to Google Cloud (dev)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DEV }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_DEV }}
+
+      - name: Ensure kubectl access (dev)
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
+          gcloud container clusters get-credentials tasks-cluster --zone europe-west9-b --project ${{ secrets.GCP_PROJECT_DEV }}
+
+      - name: Remove namespace finalizers (dev)
+        shell: bash
+        run: |
+          set +e
+          for ns in dev dev-monitoring; do
+            if kubectl get namespace "$ns" >/dev/null 2>&1; then
+              if kubectl get namespace "$ns" -o jsonpath='{.spec.finalizers}' 2>/dev/null | grep -q 'kubernetes'; then
+                echo "Removing finalizers from namespace $ns"
+                kubectl get namespace "$ns" -o json | jq 'del(.spec.finalizers)' > /tmp/$ns.json
+                kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f /tmp/$ns.json || true
+              fi
+            fi
+          done
+          set -e
+
+      - name: Authenticate to Google Cloud (prod)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PRD }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_PRD }}
+
+      - name: Ensure kubectl access (prod)
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
+          gcloud container clusters get-credentials tasks-cluster --zone europe-west1-b --project ${{ secrets.GCP_PROJECT_PRD }}
+
+      - name: Remove namespace finalizers (prod)
+        shell: bash
+        run: |
+          set +e
+          for ns in prd prd-monitoring; do
+            if kubectl get namespace "$ns" >/dev/null 2>&1; then
+              if kubectl get namespace "$ns" -o jsonpath='{.spec.finalizers}' 2>/dev/null | grep -q 'kubernetes'; then
+                echo "Removing finalizers from namespace $ns"
+                kubectl get namespace "$ns" -o json | jq 'del(.spec.finalizers)' > /tmp/$ns.json
+                kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f /tmp/$ns.json || true
+              fi
+            fi
+          done
+          set -e
+
   deploy_dev:
     name: Apply Dev
     runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     environment: dev
-    needs: tests
+    needs: cleanup_namespaces
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       github.event_name == 'workflow_dispatch'
