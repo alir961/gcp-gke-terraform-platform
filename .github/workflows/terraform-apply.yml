@@ -179,14 +179,34 @@ jobs:
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
         run: gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
 
-      - name: Terraform apply (dev)
+      - name: Terraform plan & apply (dev) - iam, bootstrap, db
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
         run: |
           set -euo pipefail
-          for module in bootstrap iam db cluster dns; do
-            echo "::group::Terraform apply dev - ${module}"
-            terraform -chdir=terraform/${module} init -input=false -backend-config=backends/backend-dev.hcl
-            terraform -chdir=terraform/${module} apply -input=false -auto-approve -var-file=../environments/dev/${module}.tfvars
+          for module in iam bootstrap db; do
+            echo "::group::Terraform dev - ${module}"
+            scripts/tf-plan-apply.sh "${module}" dev
+            echo "::endgroup::"
+          done
+
+      - name: Build and push API image (dev)
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+        run: |
+          set -euo pipefail
+          IMAGE="$(terraform -chdir=terraform/bootstrap output -raw image_repository)"
+          gcloud auth configure-docker "${IMAGE%%/*}" --quiet
+          docker build -t "${IMAGE}:${GITHUB_SHA}" app
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          echo "TF_VAR_image_repository=${IMAGE}" >> "$GITHUB_ENV"
+          echo "TF_VAR_image_tag=${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Terraform plan & apply (dev) - cluster, dns
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+        run: |
+          set -euo pipefail
+          for module in cluster dns; do
+            echo "::group::Terraform dev - ${module}"
+            scripts/tf-plan-apply.sh "${module}" dev
             echo "::endgroup::"
           done
 
@@ -225,12 +245,30 @@ jobs:
       - name: Set gcloud project (prd)
         run: gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
 
-      - name: Terraform apply (prd)
+      - name: Terraform plan & apply (prd) - iam, bootstrap, db
         run: |
           set -euo pipefail
-          for module in bootstrap iam db cluster dns; do
-            echo "::group::Terraform apply prd - ${module}"
-            terraform -chdir=terraform/${module} init -input=false -backend-config=backends/backend-prd.hcl
-            terraform -chdir=terraform/${module} apply -input=false -auto-approve -var-file=../environments/prd/${module}.tfvars
+          for module in iam bootstrap db; do
+            echo "::group::Terraform prd - ${module}"
+            scripts/tf-plan-apply.sh "${module}" prd
+            echo "::endgroup::"
+          done
+
+      - name: Build and push API image (prd)
+        run: |
+          set -euo pipefail
+          IMAGE="$(terraform -chdir=terraform/bootstrap output -raw image_repository)"
+          gcloud auth configure-docker "${IMAGE%%/*}" --quiet
+          docker build -t "${IMAGE}:${GITHUB_SHA}" app
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          echo "TF_VAR_image_repository=${IMAGE}" >> "$GITHUB_ENV"
+          echo "TF_VAR_image_tag=${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Terraform plan & apply (prd) - cluster, dns
+        run: |
+          set -euo pipefail
+          for module in cluster dns; do
+            echo "::group::Terraform prd - ${module}"
+            scripts/tf-plan-apply.sh "${module}" prd
             echo "::endgroup::"
           done

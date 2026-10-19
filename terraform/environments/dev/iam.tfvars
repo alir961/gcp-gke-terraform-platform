@@ -61,6 +61,7 @@ members = {
   }
   serviceAccount = {
     "github-actions-sa@example-project-dev.iam.gserviceaccount.com" = [
+      "roles/artifactregistry.admin",
       "roles/cloudsql.admin",
       "roles/compute.networkAdmin",
       "roles/container.admin",
@@ -73,6 +74,7 @@ members = {
       "roles/storage.admin",
     ]
     "github-actions-ci-cd@example-project-dev.iam.gserviceaccount.com" = [
+      "roles/artifactregistry.admin",
       "roles/cloudsql.admin",
       "roles/compute.networkAdmin",
       "roles/container.admin",

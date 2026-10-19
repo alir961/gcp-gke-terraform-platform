@@ -28,6 +28,17 @@ locals {
       }
     }
   })
+
+  # Only the non-empty image settings are passed, so the values file stays the default.
+  tasks_api_image_values = yamlencode({
+    image = {
+      for key, value in {
+        repository = var.image_repository
+        tag        = var.image_tag
+        pullPolicy = var.image_tag != "" ? "IfNotPresent" : ""
+      } : key => value if value != ""
+    }
+  })
 }
 
 resource "kubernetes_secret" "tasks_api" {
@@ -90,10 +101,13 @@ resource "helm_release" "tasks_api" {
   name      = "tasks-api"
   chart     = "../../helm/tasks-api"
   namespace = var.env
-  values = [
-    file("../../helm/tasks-api/values.${var.env}.yaml"),
-    local.tasks_api_dynamic_values
-  ]
+  values = concat(
+    [
+      file("../../helm/tasks-api/values.${var.env}.yaml"),
+      local.tasks_api_dynamic_values,
+    ],
+    var.image_tag != "" ? [local.tasks_api_image_values] : [],
+  )
   wait            = false
   timeout         = 300
   atomic          = false

@@ -69,3 +69,15 @@ variable "ingress_ip_name" {
   description = "Name of the global static IP reserved for the HTTP(S) load balancer"
   type        = string
 }
+
+variable "image_repository" {
+  description = "Optional override for the API image repository (set by CI)"
+  type        = string
+  default     = ""
+}
+
+variable "image_tag" {
+  description = "Immutable API image tag to deploy, e.g. the commit SHA (set by CI); empty keeps the values file"
+  type        = string
+  default     = ""
+}
