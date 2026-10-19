@@ -62,6 +62,8 @@ More detail: [Terraform guide](terraform/readme.md) · [Helm charts](helm/README
 
 Pre-commit hooks run `ruff`, `ruff-format`, `terraform fmt` and `terraform validate`.
 
+The jobs that talk to GCP (cleanup, plan, apply) only run when the repository variable `GCP_DEPLOY_ENABLED` is `true`, with the Workload Identity secrets configured. Without it, CI still runs the API tests, formatting and validation.
+
 ## Run it
 
 Locally, the API and its PostgreSQL run with Docker Compose:

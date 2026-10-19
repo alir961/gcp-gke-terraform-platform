@@ -79,9 +79,10 @@ jobs:
     needs: fmt_validate
     runs-on: ${{ matrix.runner }}
     if: >
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'workflow_dispatch' &&
-        (github.event.inputs.environment == 'dev' || github.event.inputs.environment == 'both'))
+      vars.GCP_DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'pull_request' ||
+        (github.event_name == 'workflow_dispatch' &&
+          (github.event.inputs.environment == 'dev' || github.event.inputs.environment == 'both')))
     environment: dev
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
@@ -123,9 +124,10 @@ jobs:
     needs: fmt_validate
     runs-on: ${{ matrix.runner }}
     if: >
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'workflow_dispatch' &&
-        (github.event.inputs.environment == 'prd' || github.event.inputs.environment == 'both'))
+      vars.GCP_DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'pull_request' ||
+        (github.event_name == 'workflow_dispatch' &&
+          (github.event.inputs.environment == 'prd' || github.event.inputs.environment == 'both')))
     environment: prd
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}

@@ -58,6 +58,8 @@ jobs:
     environment: dev
     runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     needs: tests
+    # GCP jobs only run once the repository is connected to a GCP project.
+    if: vars.GCP_DEPLOY_ENABLED == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -95,6 +97,8 @@ jobs:
     environment: prd
     runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     needs: tests
+    # GCP jobs only run once the repository is connected to a GCP project.
+    if: vars.GCP_DEPLOY_ENABLED == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
