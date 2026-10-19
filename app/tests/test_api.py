@@ -90,3 +90,44 @@ async def test_get_task_not_found_returns_404(client):
     response = await client.get("/tasks/1", headers=headers)
     assert response.status_code == 404
     assert response.json()["detail"] == "Task not found"
+
+
+@pytest.mark.asyncio
+async def test_tasks_without_authorization_header_returns_401(client):
+    response = await client.get("/tasks")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_partial_update_keeps_other_fields(client):
+    headers = {"Authorization": f"Bearer {_make_token()}"}
+    created = await client.post(
+        "/tasks",
+        headers=headers,
+        json={
+            "title": "write tests",
+            "content": "cover the update endpoint",
+            "due_date": "2026-12-01",
+            "request_timestamp": "2026-10-20T10:00:00",
+        },
+    )
+    assert created.status_code == 201
+    task_id = created.json()["id"]
+
+    updated = await client.put(
+        f"/tasks/{task_id}",
+        headers=headers,
+        json={"done": True, "request_timestamp": "2026-10-20T11:00:00"},
+    )
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["done"] is True
+    assert body["title"] == "write tests"
+
+
+@pytest.mark.asyncio
+async def test_metrics_endpoint_exposes_prometheus_format(client):
+    await client.get("/status")
+    response = await client.get("/metrics")
+    assert response.status_code == 200
+    assert "http_request" in response.text

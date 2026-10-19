@@ -16,4 +16,4 @@ class Task(Base):
     done = Column(Boolean, default=False)
     request_timestamp = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

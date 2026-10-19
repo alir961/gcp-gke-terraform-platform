@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Request, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +11,8 @@ from redis.asyncio import Redis
 import jwt
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
-from typing import Callable
+from prometheus_fastapi_instrumentator import Instrumentator
+from typing import Callable, Optional
 
 try:
     from app.database import AsyncSessionLocal, engine, Base  # type: ignore
@@ -36,22 +38,17 @@ REDIS_URL = os.getenv("REDIS_URL")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ENVIRONMENT = os.getenv("ENVIRONMENT")
 
-print(f"FastAPI starting in {ENVIRONMENT} mode, connecting to DB {DB_HOST}:{DB_PORT}")
-
-# -----------------------------
-# FastAPI init
-# -----------------------------
-app = FastAPI(title="FastAPI GCP-ready Backend")
-
-logger = logging.getLogger("uvicorn.access")
-logger.setLevel(logging.INFO)
+logger = logging.getLogger("uvicorn.error")
+logger.info(
+    "FastAPI starting in %s mode, connecting to DB %s:%s", ENVIRONMENT, DB_HOST, DB_PORT
+)
 
 
 # -----------------------------
-# Startup event
+# Startup
 # -----------------------------
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(_: FastAPI):
     # Create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -66,6 +63,16 @@ async def startup():
         logger.info(f"Rate limiter initialized for {ENVIRONMENT}")
     except Exception as exc:
         logger.warning("Redis not ready, rate limiting disabled: %s", exc)
+    yield
+
+
+# -----------------------------
+# FastAPI init
+# -----------------------------
+app = FastAPI(title="FastAPI GCP-ready Backend", lifespan=lifespan)
+
+# Prometheus metrics on /metrics, scraped by the ServiceMonitor.
+Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
 
 # -----------------------------
@@ -91,8 +98,8 @@ async def get_session() -> AsyncSession:
 # -----------------------------
 # JWT verification
 # -----------------------------
-def verify_token(authorization: str = Header(...)):
-    if not authorization.startswith("Bearer "):
+def verify_token(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
     token = authorization.split(" ")[1]
     try:
@@ -186,7 +193,7 @@ async def update_task(
         raise HTTPException(status_code=404, detail="Task not found")
     if task.request_timestamp < db_task.request_timestamp:
         raise HTTPException(status_code=409, detail="Conflict: outdated timestamp")
-    for field, value in task.dict(exclude_unset=True).items():
+    for field, value in task.model_dump(exclude_unset=True).items():
         setattr(db_task, field, value)
     await session.commit()
     await session.refresh(db_task)

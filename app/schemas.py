@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import date, datetime
 from typing import Optional
 
@@ -11,12 +11,14 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
-    title: Optional[str]
-    content: Optional[str]
-    done: Optional[bool]
+    title: Optional[str] = None
+    content: Optional[str] = None
+    done: Optional[bool] = None
     request_timestamp: datetime
 
 
 class Task(TaskCreate):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     done: bool

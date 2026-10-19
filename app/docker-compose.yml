@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16
@@ -31,9 +29,14 @@ services:
       - postgres
       - redis
     env_file:
-      - .env/dev  # Switch to .env/prod for production
+      - path: .env/dev.env  # optional local overrides
+        required: false
     environment:
-      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASS}@postgres:5432/${DB_NAME}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-mypassword}
+      DB_NAME: ${DB_NAME:-tasks}
       REDIS_URL: redis://redis:6379
       ENVIRONMENT: ${ENVIRONMENT:-dev}
       SECRET_KEY: ${SECRET_KEY:-DevSecretKey}

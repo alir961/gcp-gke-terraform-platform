@@ -7,6 +7,7 @@ python-dotenv
 redis==4.5.5
 pyjwt
 fastapi-limiter==0.1.6
+prometheus-fastapi-instrumentator
 httpx
 pytest
 pytest-asyncio
