@@ -3,10 +3,9 @@ import uuid
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, Request, Depends, Header
+from fastapi import FastAPI, HTTPException, Request, Response, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from dotenv import load_dotenv
 from redis.asyncio import Redis
 import jwt
 from fastapi_limiter import FastAPILimiter
@@ -23,12 +22,7 @@ except ImportError:  # pragma: no cover - fallback when running as module
     from models import Task
     from schemas import TaskCreate, TaskUpdate, Task as TaskSchema
 
-# -----------------------------
-# Load environment
-# -----------------------------
-env_file = os.getenv("ENV_FILE", ".env/dev.env")
-load_dotenv(env_file)
-
+# Environment (the ENV_FILE dotenv file is loaded by database.py, imported above)
 DB_HOST = os.getenv("DB_HOST")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
@@ -112,9 +106,9 @@ def verify_token(authorization: Optional[str] = Header(None)):
 def rate_limit_or_skip(times: int, seconds: int) -> Callable:
     limiter = RateLimiter(times=times, seconds=seconds)
 
-    async def dependency(request: Request):
+    async def dependency(request: Request, response: Response):
         if FastAPILimiter.redis:
-            return await limiter(request)
+            return await limiter(request, response)
 
     return dependency
 

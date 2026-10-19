@@ -131,3 +131,19 @@ async def test_metrics_endpoint_exposes_prometheus_format(client):
     response = await client.get("/metrics")
     assert response.status_code == 200
     assert "http_request" in response.text
+
+
+@pytest.mark.asyncio
+async def test_rate_limited_routes_work_when_redis_is_up(client, monkeypatch):
+    calls = []
+
+    async def fake_limiter_call(self, request, response):
+        calls.append((request.url.path, response))
+
+    monkeypatch.setattr(main.FastAPILimiter, "redis", object())
+    monkeypatch.setattr(main.RateLimiter, "__call__", fake_limiter_call)
+    response = await client.get(
+        "/tasks", headers={"Authorization": f"Bearer {_make_token()}"}
+    )
+    assert response.status_code == 200
+    assert calls and calls[0][0] == "/tasks"

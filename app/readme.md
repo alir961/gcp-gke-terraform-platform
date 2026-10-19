@@ -44,7 +44,7 @@ You can run the API either with **Docker Compose** or with a **Python virtual en
    ```
    Expected response:
    ```json
-   {"status": "ok"}
+   {"status": "ok", "env": "dev"}
    ```
 
 ---
@@ -89,19 +89,13 @@ You can run the API either with **Docker Compose** or with a **Python virtual en
    pip install -r requirements.txt
    ```
 
-5. **Set environment variables (choose dev or prod .env file)**  
-   Dev example:
+5. **Start PostgreSQL and Redis, and create the env file**
    ```bash
-   export ENV_FILE=.env/dev.env
+   docker compose up -d postgres redis
+   mkdir -p .env && cp /dev/null .env/dev.env   # then fill it with the dev example below
    ```
-   Prod example:
-   ```bash
-   export ENV_FILE=.env/prod.env
-   ```
-   - On Windows PowerShell:
-     ```powershell
-     $env:ENV_FILE = ".env\dev.env"
-     ```
+   The app reads `.env/dev.env` by default; point `ENV_FILE` at another file to change it
+   (PowerShell: `$env:ENV_FILE = ".env\dev.env"`).
 
 6. **Run the application**
    ```bash
@@ -140,31 +134,21 @@ You can run the API either with **Docker Compose** or with a **Python virtual en
 
 ## ⚙️ Configuration
 
-The API connects to the database using environment variables defined in `.env/dev.env` or `.env/prod.env`. You can either set `ENV_FILE` to point to the desired file or export the individual variables.
+The API reads `ENVIRONMENT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `REDIS_URL`, `SECRET_KEY` and the optional `DB_ECHO=true` (log SQL). Locally they come from the file named by `ENV_FILE` (default `.env/dev.env`); variables already set in the environment win.
 
-**Example dev `.env/dev.env`:**
+**Example dev `.env/dev.env`** (matches the Docker Compose defaults):
 ```bash
 ENVIRONMENT=dev
-DB_USER=tasks_user
-DB_PASS=DevSecret444!
-DB_NAME=tasks_db
+DB_USER=postgres
+DB_PASS=mypassword
+DB_NAME=tasks
 DB_HOST=localhost
 DB_PORT=5432
 REDIS_URL=redis://localhost:6379
 SECRET_KEY=DevSecretKey
 ```
 
-**Example prod `.env/prod.env`:**
-```bash
-ENVIRONMENT=prod
-DB_USER=tasks_user
-DB_PASS=ProdSecret444!
-DB_NAME=tasks_db
-DB_HOST=fastapi-db.prod.svc.cluster.local
-DB_PORT=5432
-REDIS_URL=redis://fastapi-redis.prod.svc.cluster.local:6379
-SECRET_KEY=ProdSecretKey
-```
+On GKE there is no env file: the Helm chart sets the same variables from a ConfigMap (Cloud SQL private IP, database, user, in-cluster Redis) and the `tasks-api-secret` secret (`DB_PASS`, `SECRET_KEY`).
 
 ---
 
@@ -185,6 +169,7 @@ Authorization: Bearer <your_token>
 | Method | Route | Description |
 |--------|-------|-------------|
 | `GET` | `/status` | Health check |
+| `GET` | `/metrics` | Prometheus metrics |
 | `POST` | `/tasks` | Create a new task |
 | `GET` | `/tasks` | List all tasks |
 | `GET` | `/tasks/{id}` | Get a task by ID |
@@ -195,14 +180,19 @@ Authorization: Bearer <your_token>
 
 ## 🧪 Quick Example
 
+Tokens are HS256 JWTs signed with `SECRET_KEY`; create one for local testing:
+
 ```bash
-curl -X POST http://localhost:8080/tasks   -H "Content-Type: application/json"   -H "Authorization: Bearer testtoken"   -d '{
+TOKEN=$(python -c "import jwt; print(jwt.encode({'sub': 'me'}, 'DevSecretKey', algorithm='HS256'))")
+curl -X POST http://localhost:8080/tasks -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{
         "title": "Buy coffee",
         "content": "Organic arabica 1kg",
-        "due_date": "2025-10-20T00:00:00",
+        "due_date": "2025-10-20",
         "request_timestamp": "2025-10-10T10:00:00"
       }'
 ```
+
+Run the tests from the repository root: `python -m pytest app/tests`.
 
 ---
 
@@ -226,6 +216,6 @@ rm -rf venv
 
 - Fully **asynchronous stack** using `asyncpg` and SQLAlchemy async ORM  
 - Custom middleware that generates a unique `correlation_id` per request  
-- Basic `Bearer token` protection  
+- JWT (`HS256`) bearer authentication, Redis rate limiting, Prometheus metrics on `/metrics`  
 - Conflict handling using `request_timestamp`  
 - Ready to be deployed on GKE with Helm (Cloud SQL private IP / proxy, Redis, K8s Secrets)
