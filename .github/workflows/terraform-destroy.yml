@@ -91,8 +91,8 @@ jobs:
               # Only force-finalize namespaces stuck in deletion; never touch active ones.
               if [ "$(kubectl get namespace "$ns" -o jsonpath='{.status.phase}' 2>/dev/null)" = "Terminating" ]; then
                 echo "Removing finalizers from stuck namespace $ns"
-                kubectl get namespace "$ns" -o json | jq 'del(.spec.finalizers)' > /tmp/$ns.json
-                kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f /tmp/$ns.json || true
+                kubectl get namespace "$ns" -o json | jq 'del(.spec.finalizers)' > "/tmp/$ns.json"
+                kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f "/tmp/$ns.json" || true
               fi
             fi
           done
@@ -210,8 +210,8 @@ jobs:
               # Only force-finalize namespaces stuck in deletion; never touch active ones.
               if [ "$(kubectl get namespace "$ns" -o jsonpath='{.status.phase}' --request-timeout=5s 2>/dev/null)" = "Terminating" ]; then
                 echo "Removing finalizers from stuck namespace $ns"
-                kubectl get namespace "$ns" -o json --request-timeout=5s | jq 'del(.spec.finalizers)' > /tmp/$ns.json
-                kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f /tmp/$ns.json || true
+                kubectl get namespace "$ns" -o json --request-timeout=5s | jq 'del(.spec.finalizers)' > "/tmp/$ns.json"
+                kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f "/tmp/$ns.json" || true
               fi
             fi
           done
