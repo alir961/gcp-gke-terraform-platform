@@ -7,9 +7,9 @@ The whole Google Cloud platform for a task-management API, written as code: netw
 - **Five Terraform stacks** (`bootstrap`, `iam`, `db`, `cluster`, `dns`) with separate GCS remote states per environment, so one stack can be planned or destroyed without touching the others
 - **Private Cloud SQL**: PostgreSQL with no public IP, reachable only from the VPC through Service Networking. Automated backups. Credentials live in **Secret Manager** and reach the pods as a Kubernetes secret created by Terraform
 - **Autoscaling on two levels**: a HorizontalPodAutoscaler on the API (up to 15 replicas at 60 % CPU in prd) and a GKE node pool that scales from 1 to 10 nodes
-- **Hardened FastAPI service**: JWT authentication on every task route, Redis-backed rate limiting, correlation IDs in logs and responses, and a container that runs as a non-root user
+- **Hardened FastAPI service**: JWT authentication on every task route, Redis-backed rate limiting, correlation IDs in logs and responses, Prometheus metrics, and a container that runs as a fixed non-root UID
 - **Public HTTPS**: GKE Ingress with a static IP, a Google-managed certificate and a Cloud DNS record per environment
-- **Monitoring**: kube-prometheus-stack (Prometheus, Grafana, Alertmanager) deployed by Terraform, with a ServiceMonitor for the API
+- **Monitoring**: kube-prometheus-stack (Prometheus, Grafana, Alertmanager) deployed by Terraform, with a ServiceMonitor scraping the API's `/metrics`
 - **Least-privilege IAM as code**: role bindings declared per principal. The CI service accounts get scoped roles instead of `roles/owner`
 - **Keyless CI/CD**: GitHub Actions authenticates to GCP through Workload Identity Federation (OIDC), so no service-account key is stored anywhere
 
@@ -32,10 +32,10 @@ The whole Google Cloud platform for a task-management API, written as code: netw
 
 | Stack | Creates |
 |---|---|
-| `terraform/bootstrap` | VPC network and subnet, storage bucket |
+| `terraform/bootstrap` | VPC network and subnet, versioned Terraform state bucket, Artifact Registry repository |
 | `terraform/iam` | Project IAM bindings for users and service accounts |
 | `terraform/db` | Cloud SQL PostgreSQL with private access, database, user, secrets in Secret Manager |
-| `terraform/cluster` | GKE cluster and autoscaling node pool, namespaces, API secret, Helm releases (API + monitoring) |
+| `terraform/cluster` | GKE cluster with Workload Identity, autoscaling node pool on a least-privilege service account, namespaces, API secret, Helm releases (API + monitoring) |
 | `terraform/dns` | DNS records pointing the domain to the ingress IP |
 
 Per-environment values are in `terraform/environments/{dev,prd}` and `helm/tasks-api/values.{dev,prd}.yaml`.
@@ -57,7 +57,7 @@ More detail: [Terraform guide](terraform/readme.md) · [Helm charts](helm/README
 | Workflow | Trigger | Steps |
 |---|---|---|
 | Terraform Plan | pull request to `main` | API tests, `terraform fmt` and `validate`, plan for dev and prd |
-| Terraform Apply | push to `main`, or manual with `DEPLOY` typed in | API tests, namespace cleanup, apply dev then prd |
+| Terraform Apply | push to `main`, or manual with `DEPLOY` typed in | API tests, stuck-namespace cleanup, then per environment (dev, then prd): plan and apply the saved plan for `iam`, `bootstrap`, `db`, build and push the API image tagged with the commit SHA, plan and apply `cluster` and `dns` |
 | Terraform Destroy | manual only, with `DESTROY` typed in | cleanup, destroy the chosen environment (bootstrap kept unless asked), final cleanup of namespaces and Cloud SQL |
 
 Pre-commit hooks run `ruff`, `ruff-format`, `terraform fmt` and `terraform validate`.
@@ -69,19 +69,12 @@ The jobs that talk to GCP (cleanup, plan, apply) only run when the repository va
 Locally, the API and its PostgreSQL run with Docker Compose:
 
 ```bash
-cd app
-docker compose up --build
-pytest tests
+docker compose -f app/docker-compose.yml up --build   # API on http://localhost:8080
+pip install -r app/requirements.txt
+python -m pytest app/tests                            # from the repository root
 ```
 
-On GCP, apply the stacks in order for one environment (the backend and tfvars files are in the repository):
-
-```bash
-for stack in bootstrap iam db cluster dns; do
-  terraform -chdir=terraform/$stack init -backend-config=backends/backend-dev.hcl
-  terraform -chdir=terraform/$stack apply -var-file=../environments/dev/$stack.tfvars
-done
-```
+On GCP, follow the [Terraform guide](terraform/readme.md#️-terraform-workflow): one-time prerequisites (state bucket, Workload Identity for CI, DNS zone), then `iam → bootstrap → db`, build and push the image, then `cluster → dns`.
 
 Load test once it is deployed:
 
