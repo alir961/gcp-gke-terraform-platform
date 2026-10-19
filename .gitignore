@@ -8,3 +8,4 @@ app/tests/__pycache__/
 app/.env
 # Local Terraform overrides (keep examples tracked)
 *.tfvars.local
+tfplan-*
