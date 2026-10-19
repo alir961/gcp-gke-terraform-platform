@@ -43,6 +43,10 @@ resource "google_container_cluster" "tasks_cluster" {
   subnetwork          = local.subnet_id
   deletion_protection = false
 
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
   master_auth {
     client_certificate_config {
       issue_client_certificate = var.issue_client_certificate
@@ -55,7 +59,9 @@ resource "google_container_node_pool" "tasks_nodes" {
   cluster  = google_container_cluster.tasks_cluster.name
   location = google_container_cluster.tasks_cluster.location
 
-  node_count = var.node_count
+  # The autoscaler owns the node count after creation; a fixed node_count
+  # would fight it on every apply.
+  initial_node_count = var.node_count
 
   autoscaling {
     min_node_count = 1
@@ -63,11 +69,36 @@ resource "google_container_node_pool" "tasks_nodes" {
   }
 
   node_config {
-    machine_type = var.machine_type
+    machine_type    = var.machine_type
+    service_account = google_service_account.nodes.email
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
+
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
   }
+}
+
+# Nodes run as a dedicated least-privilege account instead of the default
+# Compute Engine account (which has Editor on the project).
+resource "google_service_account" "nodes" {
+  account_id   = "tasks-gke-nodes"
+  display_name = "GKE nodes (tasks-cluster)"
+}
+
+resource "google_project_iam_member" "nodes" {
+  for_each = toset([
+    "roles/artifactregistry.reader",
+    "roles/logging.logWriter",
+    "roles/monitoring.metricWriter",
+    "roles/monitoring.viewer",
+    "roles/stackdriver.resourceMetadata.writer",
+  ])
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.nodes.email}"
 }
 
 resource "google_compute_global_address" "ingress_ip" {

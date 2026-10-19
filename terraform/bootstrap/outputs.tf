@@ -14,6 +14,6 @@ output "vpc_id" {
 }
 
 output "bucket_name" {
-  value       = google_storage_bucket.image_bucket.name
+  value       = google_storage_bucket.state_bucket.name
   description = "The name of the created storage bucket"
 }

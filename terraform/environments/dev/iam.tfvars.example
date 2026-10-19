@@ -40,11 +40,12 @@ members = {
   }
   serviceAccount = {
     "terraform-runner@example.iam.gserviceaccount.com" = [
-      "roles/billing.admin",
       "roles/cloudsql.admin",
       "roles/compute.networkAdmin",
       "roles/container.admin",
       "roles/dns.admin",
+      "roles/iam.serviceAccountAdmin",
+      "roles/iam.serviceAccountUser",
       "roles/resourcemanager.projectIamAdmin",
       "roles/secretmanager.admin",
       "roles/servicenetworking.networksAdmin",

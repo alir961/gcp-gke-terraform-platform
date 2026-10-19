@@ -13,6 +13,7 @@ It covers workflows for initialization, planning, applying, and destroying infra
 | `cluster` | Deploys **Kubernetes (GKE)** clusters and node pools. |
 | `iam` | Manages **Identity and Access Management (IAM)** roles, service accounts, and permissions. |
 | `db` | Provisions **managed PostgreSQL** database instances. |
+| `dns` | Points the API record at the ingress IP and hosts the static landing page. |
 
 ---
 
@@ -20,16 +21,16 @@ It covers workflows for initialization, planning, applying, and destroying infra
 
 ### Plan (PR)
 - Workflow : `.github/workflows/terraform-plan.yml`
-- Déclencheur : chaque pull request vers `dev` (plan dev) et `main` (plan prod).
+- Déclencheur : chaque pull request vers `main` (plan dev **et** prod), ou manuel.
 - Actions : `terraform fmt` + `terraform validate` (en local sans backend), puis `terraform plan` pour **chaque module** sur l’environnement concerné.
 - Authentification : via Workload Identity Federation (actions `google-github-actions/auth@v2`) en récupérant les secrets d’environnement.
 - Artefacts : les plans (`tfplan-dev` / `tfplan-prd`) sont publiés pour revue hors ligne.
 
 ### Apply (Merges + relance manuelle)
 - Workflow : `.github/workflows/terraform-apply.yml`
-- Déclencheurs automatiques : `push` sur `dev` → apply **dev**, `push` sur `main` → apply **prod** (les environnements GitHub peuvent exiger une approbation humaine côté interface).
+- Déclencheur automatique : `push` sur `main` → apply **dev** puis **prod** (protéger l’environnement GitHub `prd` avec des reviewers obligatoires pour valider l’apply prod).
 - Déclencheur manuel : `Actions → Terraform Apply → Run workflow` (sélectionner `dev` ou `prd` et saisir `DEPLOY` pour rejouer un déploiement).
-- Chaîne : apply `bootstrap → iam → db → cluster` pour l’environnement choisi.
+- Chaîne : apply `bootstrap → iam → db → cluster → dns` pour l’environnement choisi.
 
 ### Destroy (Manuel)
 - Workflow : `.github/workflows/terraform-destroy.yml`
@@ -45,7 +46,7 @@ It covers workflows for initialization, planning, applying, and destroying infra
 | `GCP_SERVICE_ACCOUNT_DEV` / `PRD` | Comptes de service GitHub Actions |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER_DEV` / `PRD` | Identifiants complets des providers OIDC |
 | `TF_BUCKET_DEV` / `PRD` | Buckets de state |
-| `TF_BILLING_ACCOUNT` | `XXXXXX-XXXXXX-XXXXXX` (optionnel mais recommandé) |
+| `TF_BILLING_ACCOUNT` | ID du compte de facturation, format `XXXXXX-XXXXXX-XXXXXX` (optionnel mais recommandé) |
 | `TF_VAR_db_password` | Mot de passe Postgres injecté dans Secret Manager & Kubernetes |
 | `TF_VAR_app_secret_key` | Clé secrète FastAPI (JWT) synchronisée via Secret Manager |
 
