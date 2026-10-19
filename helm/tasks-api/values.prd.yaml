@@ -1,7 +1,8 @@
 image:
   repository: europe-west1-docker.pkg.dev/example-project-prd/tasks-registry/tasks-api
   tag: latest
-  pullPolicy: IfNotPresent
+  # A mutable tag needs Always, or nodes keep running the image they pulled first.
+  pullPolicy: Always
 
 app:
   environment: prod
@@ -35,7 +36,9 @@ service:
 
 redis:
   enabled: true
-  replicaCount: 2
+  # Replicas would be independent Redis servers behind one Service, splitting
+  # the rate-limit counters; keep a single instance.
+  replicaCount: 1
   image:
     repository: redis
     tag: 7.2.5-alpine
@@ -60,7 +63,7 @@ backendConfig:
 
 prometheus:
   enabled: true
-  path: /status
+  path: /metrics
   port: "8080"
   serviceMonitor:
     enabled: true
@@ -78,6 +81,18 @@ ingress:
   annotations: {}
 
 
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
 
 replicaCount: 3
 

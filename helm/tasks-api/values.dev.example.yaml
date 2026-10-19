@@ -1,7 +1,8 @@
 image:
   repository: europe-west1-docker.pkg.dev/example-project-dev/tasks-registry/tasks-api
   tag: latest
-  pullPolicy: IfNotPresent
+  # A mutable tag needs Always, or nodes keep running the image they pulled first.
+  pullPolicy: Always
 
 app:
   environment: dev
@@ -61,7 +62,7 @@ backendConfig:
 
 prometheus:
   enabled: true
-  path: /status
+  path: /metrics
   port: "8080"
   serviceMonitor:
     enabled: true
@@ -79,6 +80,18 @@ ingress:
   annotations: {}
 
 
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
 
 replicaCount: 2
 

@@ -11,6 +11,7 @@ spec:
   selector:
     matchLabels:
       {{- include "tasks-api.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
   template:
     metadata:
       {{- if or .Values.podAnnotations .Values.prometheus.enabled }}
