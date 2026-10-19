@@ -12,7 +12,7 @@ os.environ.setdefault("DB_PASS", "test")
 os.environ.setdefault("DB_NAME", "test")
 os.environ.setdefault("DB_HOST", "localhost")
 os.environ.setdefault("DB_PORT", "5432")
-os.environ.setdefault("SECRET_KEY", "test-secret")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-32-bytes-long")
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
