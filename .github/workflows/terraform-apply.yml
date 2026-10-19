@@ -9,6 +9,8 @@ on:
       environment:
         description: "Environnement à déployer (dev ou prd)"
         required: true
+        type: choice
+        options: [dev, prd]
         default: "dev"
       confirmation:
         description: 'Tapez "DEPLOY" pour lancer terraform apply manuellement'
@@ -40,7 +42,7 @@ jobs:
           python-version: "3.11"
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
 
       - name: Install dependencies
         run: |
@@ -84,8 +86,9 @@ jobs:
           set +e
           for ns in dev dev-monitoring; do
             if kubectl get namespace "$ns" >/dev/null 2>&1; then
-              if kubectl get namespace "$ns" -o jsonpath='{.spec.finalizers}' 2>/dev/null | grep -q 'kubernetes'; then
-                echo "Removing finalizers from namespace $ns"
+              # Only force-finalize namespaces stuck in deletion; never touch active ones.
+              if [ "$(kubectl get namespace "$ns" -o jsonpath='{.status.phase}' 2>/dev/null)" = "Terminating" ]; then
+                echo "Removing finalizers from stuck namespace $ns"
                 kubectl get namespace "$ns" -o json | jq 'del(.spec.finalizers)' > /tmp/$ns.json
                 kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f /tmp/$ns.json || true
               fi
@@ -123,8 +126,9 @@ jobs:
           set +e
           for ns in prd prd-monitoring; do
             if kubectl get namespace "$ns" >/dev/null 2>&1; then
-              if kubectl get namespace "$ns" -o jsonpath='{.spec.finalizers}' 2>/dev/null | grep -q 'kubernetes'; then
-                echo "Removing finalizers from namespace $ns"
+              # Only force-finalize namespaces stuck in deletion; never touch active ones.
+              if [ "$(kubectl get namespace "$ns" -o jsonpath='{.status.phase}' 2>/dev/null)" = "Terminating" ]; then
+                echo "Removing finalizers from stuck namespace $ns"
                 kubectl get namespace "$ns" -o json | jq 'del(.spec.finalizers)' > /tmp/$ns.json
                 kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f /tmp/$ns.json || true
               fi
@@ -162,7 +166,7 @@ jobs:
 
       - name: Setup Terraform
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
 
       - name: Authenticate to Google Cloud (dev)
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
@@ -210,7 +214,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
 
       - name: Authenticate to Google Cloud (prd)
         uses: google-github-actions/auth@v2
