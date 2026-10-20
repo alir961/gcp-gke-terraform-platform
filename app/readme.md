@@ -6,6 +6,8 @@ A simple **FastAPI** application for creating, reading, updating, and deleting t
 
 ## 🚀 Run Locally
 
+Works on Linux, macOS and Windows (Docker Desktop).
+
 You can run the API either with **Docker Compose** or with a **Python virtual environment (venv)**.
 
 ---
@@ -19,9 +21,8 @@ You can run the API either with **Docker Compose** or with a **Python virtual en
 #### ▶️ Start the Project
 1. **Clone the repository**
    ```bash
-   git clone <repo_url>
-   cd <project_folder>
-   cd app
+   git clone https://github.com/alir961/gcp-gke-terraform-platform.git
+   cd gcp-gke-terraform-platform/app
    ```
 
 2. **Start the services**
@@ -30,13 +31,14 @@ You can run the API either with **Docker Compose** or with a **Python virtual en
    ```
    This launches:
    - A **PostgreSQL** container (`postgres:16`)
-   - A **FastAPI** container (`uvicorn`)
+   - A **Redis** container (`redis:7`), used for rate limiting
+   - A **FastAPI** container (`uvicorn`, reloads on code changes)
 
 3. **Check that everything is running**
    ```bash
    docker ps
    ```
-   You should see two containers: `postgres` and `fastapi_app`.
+   You should see three containers: `postgres`, `redis` and `fastapi_app`.
 
 4. **Verify the API is up**
    ```bash
@@ -52,7 +54,8 @@ You can run the API either with **Docker Compose** or with a **Python virtual en
 ### 🐍 Option 2: Run with Python venv (recommended for local dev)
 
 #### 🧰 Requirements
-- Python 3.10+ (3.12 recommended)
+- Python 3.11+ (the Docker image and CI use 3.11)
+- Docker, for PostgreSQL and Redis
 - [pip](https://pip.pypa.io/en/stable/)
 
 > We use a virtual environment to isolate dependencies from your system Python.
@@ -60,8 +63,8 @@ You can run the API either with **Docker Compose** or with a **Python virtual en
 #### ▶️ Steps
 1. **Clone the repository**
    ```bash
-   git clone <repo_url>
-   cd <project_folder>/app
+   git clone https://github.com/alir961/gcp-gke-terraform-platform.git
+   cd gcp-gke-terraform-platform/app
    ```
 
 2. **Create a virtual environment**
@@ -92,7 +95,17 @@ You can run the API either with **Docker Compose** or with a **Python virtual en
 5. **Start PostgreSQL and Redis, and create the env file**
    ```bash
    docker compose up -d postgres redis
-   mkdir -p .env && cp /dev/null .env/dev.env   # then fill it with the dev example below
+   mkdir -p .env
+   cat > .env/dev.env <<'EOF'
+   ENVIRONMENT=dev
+   DB_USER=postgres
+   DB_PASS=mypassword
+   DB_NAME=tasks
+   DB_HOST=localhost
+   DB_PORT=5432
+   REDIS_URL=redis://localhost:6379
+   SECRET_KEY=DevSecretKey
+   EOF
    ```
    The app reads `.env/dev.env` by default; point `ENV_FILE` at another file to change it
    (PowerShell: `$env:ENV_FILE = ".env\dev.env"`).
@@ -154,7 +167,7 @@ On GKE there is no env file: the Helm chart sets the same variables from a Confi
 
 ## 🔐 Authentication
 
-All endpoints except `/status` require a header:
+All endpoints except `/status` and `/metrics` require a header:
 
 ```
 Authorization: Bearer <your_token>

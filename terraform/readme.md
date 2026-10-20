@@ -19,49 +19,55 @@ It covers workflows for initialization, planning, applying, and destroying infra
 
 ## 🤖 GitHub Actions Automation
 
-### Plan (PR)
-- Workflow : `.github/workflows/terraform-plan.yml`
-- Déclencheur : chaque pull request vers `main` (plan dev **et** prod), ou manuel.
-- Actions : `terraform fmt` + `terraform validate` (en local sans backend), puis `terraform plan` pour **chaque module** sur l’environnement concerné.
-- Authentification : via Workload Identity Federation (actions `google-github-actions/auth@v2`) en récupérant les secrets d’environnement.
-- Artefacts : les plans (`tfplan-dev` / `tfplan-prd`) sont publiés pour revue hors ligne.
+### Plan (pull request)
+- Workflow: `.github/workflows/terraform-plan.yml`
+- Trigger: every pull request to `main` (plans dev **and** prd), or manual.
+- Steps: API tests, `terraform fmt` and `terraform validate` (locally, without a backend), then `terraform plan` for **every stack** of each environment.
+- Authentication: Workload Identity Federation (`google-github-actions/auth@v2`) with the environment secrets below.
+- Artifacts: the plans (`tfplan-dev` / `tfplan-prd`) are uploaded for offline review.
 
-### Apply (Merges + relance manuelle)
-- Workflow : `.github/workflows/terraform-apply.yml`
-- Déclencheur automatique : `push` sur `main` → apply **dev** puis **prod** (protéger l’environnement GitHub `prd` avec des reviewers obligatoires pour valider l’apply prod).
-- Déclencheur manuel : `Actions → Terraform Apply → Run workflow` (sélectionner `dev` ou `prd` et saisir `DEPLOY` pour rejouer un déploiement).
-- Chaîne : plan puis apply du plan exact pour `iam → bootstrap → db`, build + push de l’image API (tag = SHA du commit) dans Artifact Registry, puis `cluster → dns` (le résumé du job affiche chaque plan).
+### Apply (merge, or manual re-run)
+- Workflow: `.github/workflows/terraform-apply.yml`
+- Automatic trigger: `push` to `main` → apply **dev**, then **prd** (protect the GitHub environment `prd` with required reviewers so the production apply waits for approval).
+- Manual trigger: `Actions → Terraform Apply → Run workflow`, pick `dev` or `prd` and type `DEPLOY` to re-run a deployment.
+- Chain: plan, then apply that exact plan, for `iam → bootstrap → db`; build and push the API image (tagged with the commit SHA) to Artifact Registry; then `cluster → dns`. The job summary shows every plan.
 
-### Destroy (Manuel)
-- Workflow : `.github/workflows/terraform-destroy.yml`
-- Déclencheur : `Actions → Terraform Destroy → Run workflow`.
-- Paramètres : `environment` (`dev` ou `prd`) + confirmation `DESTROY`.
-- Paramètre optionnel `destroy_bootstrap` (`false` par défaut) : passer à `true` uniquement si vous souhaitez supprimer le module `bootstrap` (et donc le bucket de state).
-- Chaîne : destroy `dns → cluster → db → iam` (et `bootstrap` uniquement si `destroy_bootstrap=true`), avec authentification OIDC identique aux autres workflows.
+### Destroy (manual)
+- Workflow: `.github/workflows/terraform-destroy.yml`
+- Trigger: `Actions → Terraform Destroy → Run workflow`.
+- Inputs: `environment` (`dev` or `prd`) and the confirmation `DESTROY`.
+- Optional input `destroy_bootstrap` (`false` by default): set it to `true` only to also delete the `bootstrap` stack, and with it the state bucket.
+- Chain: destroy `dns → cluster → db → iam` (and `bootstrap` only when `destroy_bootstrap=true`), with the same OIDC authentication as the other workflows.
 
-### Secrets GitHub à définir (environnements)
-| Secret | Valeur |
-|--------|--------|
-| `GCP_PROJECT_DEV` / `PRD` | ID projet GCP (`example-project-dev`, `example-project-prd`) |
-| `GCP_SERVICE_ACCOUNT_DEV` / `PRD` | Comptes de service GitHub Actions |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER_DEV` / `PRD` | Identifiants complets des providers OIDC |
-| `TF_BUCKET_DEV` / `PRD` | Buckets de state |
-| `TF_BILLING_ACCOUNT` | ID du compte de facturation, format `XXXXXX-XXXXXX-XXXXXX` (optionnel mais recommandé) |
-| `TF_VAR_db_password` | Mot de passe Postgres injecté dans Secret Manager & Kubernetes |
-| `TF_VAR_app_secret_key` | Clé secrète FastAPI (JWT) synchronisée via Secret Manager |
+### GitHub secrets (per environment)
+| Secret | Value |
+|--------|-------|
+| `GCP_PROJECT_DEV` / `PRD` | GCP project ID (`example-project-dev`, `example-project-prd`) |
+| `GCP_SERVICE_ACCOUNT_DEV` / `PRD` | GitHub Actions service accounts |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER_DEV` / `PRD` | Full resource names of the OIDC providers |
+| `TF_BUCKET_DEV` / `PRD` | State buckets |
+| `TF_BILLING_ACCOUNT` | Billing account ID, format `XXXXXX-XXXXXX-XXXXXX` (optional but recommended) |
+| `TF_VAR_db_password` | PostgreSQL password, stored in Secret Manager and Kubernetes |
+| `TF_VAR_app_secret_key` | FastAPI JWT signing key, synced through Secret Manager |
 
-> ℹ️ **Documentation soutenance** : préciser que prod est déployé après merge sur `main` (avec validation éventuelle côté environnement GitHub) et qu’un workflow manuel existe pour rejouer un apply si besoin.
-> ⚠️ **Limites IAM GCP** : les rôles `roles/owner` et `roles/billing.admin` se gèrent hors Terraform (console GCP / commande `gcloud`). GCP impose une invitation manuelle pour les owners et n’autorise pas `roles/billing.*` au niveau projet. L’équipe conserve donc des rôles techniques (`roles/editor`, `container.admin`, `dns.admin`, etc.) et les owners existants ne sont pas pilotés par Terraform.
-> ⚠️ **Réseau Cloud SQL** : dev et prd utilisent le VPC et le sous-réseau créés par `bootstrap` (`iac-<env>-vpc`, `iac-<env>-vpc-subnet`), dans la même région que le cluster. Une instance PostgreSQL existante reste liée à son VPC par la connexion Service Networking : changer `vpc_network` ensuite impose de recréer la base.
+Also set the repository variable `GCP_DEPLOY_ENABLED=true`; without it the GCP jobs are skipped.
+
+> ⚠️ **GCP IAM limits**: `roles/owner` and `roles/billing.admin` are managed outside Terraform (GCP console or `gcloud`). GCP requires a manual invitation for owners and does not allow `roles/billing.*` at project level. The team therefore keeps technical roles (`roles/editor`, `container.admin`, `dns.admin`, etc.), and existing owners are not managed by Terraform.
+> ⚠️ **Cloud SQL network**: dev and prd use the VPC and subnet created by `bootstrap` (`iac-<env>-vpc`, `iac-<env>-vpc-subnet`), in the same region as the cluster. An existing PostgreSQL instance stays bound to its VPC through the Service Networking connection: changing `vpc_network` afterwards means recreating the database.
 
 ---
 
 ## ⚙️ Terraform Workflow
 
-All commands run from the repository root. Each stack has its own backend file
+All commands run from the repository root, in bash (Linux, macOS, or WSL 2 on Windows). Each stack has its own backend file
 (`terraform/<stack>/backends/backend-<env>.hcl`) and tfvars file
-(`terraform/environments/<env>/<stack>.tfvars`). Copy the `*.tfvars.example`
-files and replace the placeholders before the first run.
+(`terraform/environments/<env>/<stack>.tfvars`). The committed tfvars and backend files are complete but use
+placeholder values (`example-project-dev`, `example-project-prd`, `example-project.com`...): replace them with
+your own before the first run (see [Deploy to GCP](../README.md#deploy-to-gcp)). The `*.tfvars.example` files
+are shorter templates and do not list every variable.
+
+Authenticate first: `gcloud auth login` and `gcloud auth application-default login` (Terraform uses the
+application-default credentials).
 
 ### 0. One-time prerequisites (per environment)
 

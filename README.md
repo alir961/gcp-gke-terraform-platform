@@ -64,20 +64,66 @@ Pre-commit hooks run `ruff`, `ruff-format`, `terraform fmt` and `terraform valid
 
 The jobs that talk to GCP (cleanup, plan, apply) only run when the repository variable `GCP_DEPLOY_ENABLED` is `true`, with the Workload Identity secrets configured. Without it, CI still runs the API tests, formatting and validation.
 
-## Run it
+## Supported platforms
 
-Locally, the API and its PostgreSQL run with Docker Compose:
+| Task | Linux | macOS | Windows |
+|---|---|---|---|
+| Run the API locally (Docker Compose), API tests | Yes | Yes | Yes (Docker Desktop; activate the venv with `.venv\Scripts\activate`) |
+| Deploy with Terraform by hand | Yes | Yes | Through **WSL 2** or Git Bash: the commands and `scripts/*.sh` are bash |
+| CI/CD | GitHub Actions on `ubuntu-latest` | | |
+
+## Requirements
+
+**Run the API locally**
+
+- Docker with the Compose plugin
+- Python 3.11 or later with `venv`, for the tests and the load test (CI uses 3.11)
+- Free ports 8080 (API), 5432 (PostgreSQL) and 6379 (Redis)
+
+**Deploy to GCP**
+
+- Two GCP projects (dev and prd) with billing enabled, and a Cloud DNS managed zone for your domain
+- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) (`gcloud`), logged in with `gcloud auth login` and `gcloud auth application-default login`
+- [Terraform](https://developer.hashicorp.com/terraform/install) 1.5 or later (providers: google ~> 6.0, kubernetes ~> 2.38, helm ~> 3.0, downloaded by `terraform init`)
+- Docker, to build and push the API image
+- `kubectl` with the `gke-gcloud-auth-plugin` (`gcloud components install kubectl gke-gcloud-auth-plugin`), for `scripts/k8r.sh` and debugging. Helm itself is not needed: Terraform installs the charts
+- Optional: `pre-commit` for the git hooks
+
+## Run it locally
 
 ```bash
-docker compose -f app/docker-compose.yml up --build   # API on http://localhost:8080
+git clone https://github.com/alir961/gcp-gke-terraform-platform.git
+cd gcp-gke-terraform-platform
+
+docker compose -f app/docker-compose.yml up --build -d   # API, PostgreSQL 16 and Redis 7; API on http://localhost:8080
+curl http://localhost:8080/status                        # {"status":"ok","env":"dev"}
+
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r app/requirements.txt
-python -m pytest app/tests                            # from the repository root
+python -m pytest app/tests                               # from the repository root, no database needed
 ```
 
-On GCP, follow the [Terraform guide](terraform/readme.md#️-terraform-workflow): one-time prerequisites (state bucket, Workload Identity for CI, DNS zone), then `iam → bootstrap → db`, build and push the image, then `cluster → dns`.
+Every route except `/status` and `/metrics` needs a JWT signed with `SECRET_KEY` (`DevSecretKey` in Compose). The [API guide](app/readme.md#-quick-example) shows how to create one and call the API, and how to run it without Docker. `docker compose -f app/docker-compose.yml down -v` stops it and deletes the database.
 
-Load test once it is deployed:
+## Deploy to GCP
+
+The repository contains placeholder values: replace them with yours before the first run.
+
+| Placeholder | Where | Replace with |
+|---|---|---|
+| `example-project-dev`, `example-project-prd` | `terraform/environments/*/*.tfvars`, `terraform/*/backends/*.hcl`, `helm/tasks-api/values.*.yaml`, `scripts/k8r.sh`, and the prd test in `terraform/db/main.tf` | your GCP project IDs |
+| `example-project-*-tfstate` | backends and tfvars | your state bucket names |
+| `example-project.com`, `example-project-com` | `dns.tfvars`, Helm values, `scripts/load_test.py` | your domain and Cloud DNS zone name |
+| `*@example.com`, `XXXXXX-XXXXXX-XXXXXX` | `iam.tfvars` | your team's accounts and billing account |
+
+`grep -rn example- terraform helm scripts` lists them all. Then follow the [Terraform guide](terraform/readme.md#️-terraform-workflow): one-time prerequisites (state bucket, Workload Identity for CI, DNS zone), then `iam → bootstrap → db`, build and push the image, then `cluster → dns`.
+
+Once deployed:
 
 ```bash
+scripts/k8r.sh dev                # sets the kubectl context, then opens k9s if installed, else lists deployments, services, ingress and HPA
+scripts/k8r.sh dev grafana        # Grafana on http://localhost:3000
 python scripts/load_test.py --env dev --host https://<domain> --token <JWT> --duration 60 --concurrency 20
 ```
+
+Destroy an environment with the `Terraform Destroy` workflow or the commands in the [guide](terraform/readme.md#2-destroy-an-environment): GKE, Cloud SQL and the load balancer are billed while they run.
