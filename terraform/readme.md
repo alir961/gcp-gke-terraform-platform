@@ -24,7 +24,7 @@ It covers workflows for initialization, planning, applying, and destroying infra
 - Trigger: every pull request to `main` (plans dev **and** prd), or manual.
 - Steps: API tests, `terraform fmt` and `terraform validate` (locally, without a backend), then `terraform plan` for **every stack** of each environment.
 - Authentication: Workload Identity Federation (`google-github-actions/auth@v2`) with the environment secrets below.
-- Artifacts: the plans (`tfplan-dev` / `tfplan-prd`) are uploaded for offline review.
+- Plans: each plan is printed in the job summary (sensitive values masked). The binary plan files are not uploaded, because they contain secrets in clear text.
 
 ### Apply (merge, or manual re-run)
 - Workflow: `.github/workflows/terraform-apply.yml`

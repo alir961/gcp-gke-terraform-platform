@@ -20,6 +20,13 @@ on:
         options: ["false", "true"]
         default: "false"
 
+# Manual inputs reach the scripts as environment variables, never as inline
+# expressions, so their text cannot be run as shell code.
+env:
+  CONFIRMATION: ${{ github.event.inputs.confirmation }}
+  TARGET_ENV: ${{ github.event.inputs.environment }}
+  DESTROY_BOOTSTRAP: ${{ github.event.inputs.destroy_bootstrap }}
+
 permissions:
   contents: read
   id-token: write
@@ -31,19 +38,19 @@ jobs:
     steps:
       - name: Vérifier la confirmation
         run: |
-          if [ "${{ github.event.inputs.confirmation }}" != "DESTROY" ]; then
+          if [ "${CONFIRMATION}" != "DESTROY" ]; then
             echo "Vous devez saisir DESTROY pour lancer la destruction."
             exit 1
           fi
       - name: Vérifier l'environnement
         run: |
-          if [ "${{ github.event.inputs.environment }}" != "dev" ] && [ "${{ github.event.inputs.environment }}" != "prd" ]; then
+          if [ "${TARGET_ENV}" != "dev" ] && [ "${TARGET_ENV}" != "prd" ]; then
             echo "L'environnement doit être dev ou prd."
             exit 1
           fi
       - name: Vérifier destroy_bootstrap
         run: |
-          if [ "${{ github.event.inputs.destroy_bootstrap }}" != "true" ] && [ "${{ github.event.inputs.destroy_bootstrap }}" != "false" ] && [ -n "${{ github.event.inputs.destroy_bootstrap }}" ]; then
+          if [ "${DESTROY_BOOTSTRAP}" != "true" ] && [ "${DESTROY_BOOTSTRAP}" != "false" ] && [ -n "${DESTROY_BOOTSTRAP}" ]; then
             echo "destroy_bootstrap doit valoir true ou false."
             exit 1
           fi
@@ -68,7 +75,7 @@ jobs:
 
       - name: Configure kubectl
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+          if [ "${TARGET_ENV}" = "dev" ]; then
             gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
             gcloud container clusters get-credentials tasks-cluster --zone europe-west1-b --project ${{ secrets.GCP_PROJECT_DEV }}
           else
@@ -80,7 +87,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+          if [ "${TARGET_ENV}" = "dev" ]; then
             namespaces=(dev dev-monitoring)
           else
             namespaces=(prd prd-monitoring)
@@ -121,7 +128,7 @@ jobs:
 
       - name: Définir le projet GCP
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+          if [ "${TARGET_ENV}" = "dev" ]; then
             gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
           else
             gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
@@ -129,7 +136,7 @@ jobs:
 
       - name: Supprimer base et utilisateur Cloud SQL
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+          if [ "${TARGET_ENV}" = "dev" ]; then
             PROJECT=${{ secrets.GCP_PROJECT_DEV }}
           else
             PROJECT=${{ secrets.GCP_PROJECT_PRD }}
@@ -142,7 +149,7 @@ jobs:
       - name: Terraform destroy
         run: |
           set -euo pipefail
-          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+          if [ "${TARGET_ENV}" = "dev" ]; then
             BACKEND=backends/backend-dev.hcl
             TFVARS_DIR=../environments/dev
           else
@@ -151,14 +158,14 @@ jobs:
           fi
 
           for module in dns cluster db iam; do
-            echo "::group::Terraform destroy ${{ github.event.inputs.environment }} - ${module}"
+            echo "::group::Terraform destroy ${TARGET_ENV} - ${module}"
             terraform -chdir=terraform/${module} init -input=false -backend-config=${BACKEND}
             terraform -chdir=terraform/${module} destroy -input=false -auto-approve -var-file=${TFVARS_DIR}/${module}.tfvars
             echo "::endgroup::"
           done
 
-          if [ "${{ github.event.inputs.destroy_bootstrap }}" = "true" ]; then
-            echo "::group::Terraform destroy ${{ github.event.inputs.environment }} - bootstrap"
+          if [ "${DESTROY_BOOTSTRAP}" = "true" ]; then
+            echo "::group::Terraform destroy ${TARGET_ENV} - bootstrap"
             terraform -chdir=terraform/bootstrap init -input=false -backend-config=${BACKEND}
             terraform -chdir=terraform/bootstrap destroy -input=false -auto-approve -var-file=${TFVARS_DIR}/bootstrap.tfvars
             echo "::endgroup::"
@@ -189,7 +196,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+          if [ "${TARGET_ENV}" = "dev" ]; then
             PROJECT=${{ secrets.GCP_PROJECT_DEV }}
             ZONE=europe-west1-b
             namespaces=(dev dev-monitoring)

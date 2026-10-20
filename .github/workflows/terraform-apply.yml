@@ -17,6 +17,12 @@ on:
         required: true
         default: "NO"
 
+# Manual inputs reach the scripts as environment variables, never as inline
+# expressions, so their text cannot be run as shell code.
+env:
+  CONFIRMATION: ${{ github.event.inputs.confirmation }}
+  TARGET_ENV: ${{ github.event.inputs.environment }}
+
 permissions:
   contents: read
   id-token: write
@@ -155,7 +161,7 @@ jobs:
       - name: Vérifier la confirmation (manuel)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev'
         run: |
-          if [ "${{ github.event.inputs.confirmation }}" != "DEPLOY" ]; then
+          if [ "${CONFIRMATION}" != "DEPLOY" ]; then
             echo "Vous devez saisir DEPLOY pour exécuter ce workflow."
             exit 1
           fi
@@ -225,7 +231,7 @@ jobs:
       - name: Vérifier la confirmation (manuel)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          if [ "${{ github.event.inputs.confirmation }}" != "DEPLOY" ]; then
+          if [ "${CONFIRMATION}" != "DEPLOY" ]; then
             echo "Vous devez saisir DEPLOY pour exécuter ce workflow."
             exit 1
           fi

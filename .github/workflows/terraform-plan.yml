@@ -113,11 +113,18 @@ jobs:
       - name: Terraform plan (dev)
         run: terraform -chdir=terraform/${{ matrix.module }} plan -input=false -no-color -var-file=../environments/dev/${{ matrix.module }}.tfvars -out=tfplan-dev
 
-      - name: Upload plan artifact (dev)
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-dev-${{ matrix.module }}
-          path: terraform/${{ matrix.module }}/tfplan-dev
+      # The binary plan holds secret values in clear text, so it is never uploaded
+      # as an artifact (anyone can download artifacts of a public repository).
+      # `terraform show` masks sensitive values.
+      - name: Publish plan summary (dev)
+        run: |
+          {
+            echo "### dev / ${{ matrix.module }}"
+            echo '```'
+            terraform -chdir=terraform/${{ matrix.module }} show -no-color tfplan-dev
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f terraform/${{ matrix.module }}/tfplan-dev
 
   plan_prd:
     name: Terraform Plan Prod
@@ -158,8 +165,15 @@ jobs:
       - name: Terraform plan (prd)
         run: terraform -chdir=terraform/${{ matrix.module }} plan -input=false -no-color -var-file=../environments/prd/${{ matrix.module }}.tfvars -out=tfplan-prd
 
-      - name: Upload plan artifact (prd)
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-prd-${{ matrix.module }}
-          path: terraform/${{ matrix.module }}/tfplan-prd
+      # The binary plan holds secret values in clear text, so it is never uploaded
+      # as an artifact (anyone can download artifacts of a public repository).
+      # `terraform show` masks sensitive values.
+      - name: Publish plan summary (prd)
+        run: |
+          {
+            echo "### prd / ${{ matrix.module }}"
+            echo '```'
+            terraform -chdir=terraform/${{ matrix.module }} show -no-color tfplan-prd
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f terraform/${{ matrix.module }}/tfplan-prd
