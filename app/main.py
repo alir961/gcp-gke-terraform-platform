@@ -16,11 +16,11 @@ from typing import Callable, Optional
 try:
     from app.database import AsyncSessionLocal, engine, Base  # type: ignore
     from app.models import Task
-    from app.schemas import TaskCreate, TaskUpdate, Task as TaskSchema
+    from app.schemas import TaskCreate, TaskUpdate, Task as TaskSchema, to_naive_utc
 except ImportError:  # pragma: no cover - fallback when running as module
     from database import AsyncSessionLocal, engine, Base  # type: ignore
     from models import Task
-    from schemas import TaskCreate, TaskUpdate, Task as TaskSchema
+    from schemas import TaskCreate, TaskUpdate, Task as TaskSchema, to_naive_utc
 
 # Environment (the ENV_FILE dotenv file is loaded by database.py, imported above)
 DB_HOST = os.getenv("DB_HOST")
@@ -206,7 +206,7 @@ async def delete_task(
     db_task = await session.get(Task, task_id)
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if request_timestamp < db_task.request_timestamp:
+    if to_naive_utc(request_timestamp) < db_task.request_timestamp:
         raise HTTPException(status_code=409, detail="Conflict: outdated timestamp")
     await session.delete(db_task)
     await session.commit()

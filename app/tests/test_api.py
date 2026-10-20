@@ -126,6 +126,44 @@ async def test_partial_update_keeps_other_fields(client):
 
 
 @pytest.mark.asyncio
+async def test_timezone_aware_timestamps_are_accepted(client):
+    headers = {"Authorization": f"Bearer {_make_token()}"}
+    created = await client.post(
+        "/tasks",
+        headers=headers,
+        json={
+            "title": "utc",
+            "content": "timestamps sent by JavaScript end with Z",
+            "due_date": "2026-12-01",
+            "request_timestamp": "2026-10-20T10:00:00Z",
+        },
+    )
+    assert created.status_code == 201
+    task_id = created.json()["id"]
+
+    stale = await client.put(
+        f"/tasks/{task_id}",
+        headers=headers,
+        json={"done": True, "request_timestamp": "2026-10-20T11:00:00+02:00"},
+    )
+    assert stale.status_code == 409
+
+    updated = await client.put(
+        f"/tasks/{task_id}",
+        headers=headers,
+        json={"done": True, "request_timestamp": "2026-10-20T11:00:00Z"},
+    )
+    assert updated.status_code == 200
+
+    deleted = await client.delete(
+        f"/tasks/{task_id}",
+        headers=headers,
+        params={"request_timestamp": "2026-10-20T12:00:00Z"},
+    )
+    assert deleted.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_metrics_endpoint_exposes_prometheus_format(client):
     await client.get("/status")
     response = await client.get("/metrics")
