@@ -11,7 +11,6 @@ import argparse
 import asyncio
 import os
 import time
-from datetime import datetime, timedelta
 
 import httpx
 import jwt
@@ -112,7 +111,7 @@ async def main() -> None:
         payload = {
             "sub": "loadtest",
             "iat": int(time.time()),
-            "exp": int((datetime.utcnow() + timedelta(hours=1)).timestamp()),
+            "exp": int(time.time()) + 3600,
         }
         token = jwt.encode(payload, args.secret, algorithm="HS256")
         generated_token = True
