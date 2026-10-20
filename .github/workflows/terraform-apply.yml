@@ -78,7 +78,7 @@ jobs:
       - name: Ensure kubectl access (dev)
         run: |
           gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
-          gcloud container clusters get-credentials tasks-cluster --zone europe-west9-b --project ${{ secrets.GCP_PROJECT_DEV }}
+          gcloud container clusters get-credentials tasks-cluster --zone europe-west1-b --project ${{ secrets.GCP_PROJECT_DEV }}
 
       - name: Remove namespace finalizers
         shell: bash

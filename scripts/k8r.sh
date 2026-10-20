@@ -7,7 +7,7 @@ ACTION=${2:-overview}
 case "${ENVIRONMENT}" in
   dev)
     PROJECT="example-project-dev"
-    ZONE="europe-west9-b"
+    ZONE="europe-west1-b"
     NAMESPACE="dev"
     ;;
   prd|prod|production)

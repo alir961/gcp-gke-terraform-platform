@@ -70,7 +70,7 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
             gcloud config set project ${{ secrets.GCP_PROJECT_DEV }}
-            gcloud container clusters get-credentials tasks-cluster --zone europe-west9-b --project ${{ secrets.GCP_PROJECT_DEV }}
+            gcloud container clusters get-credentials tasks-cluster --zone europe-west1-b --project ${{ secrets.GCP_PROJECT_DEV }}
           else
             gcloud config set project ${{ secrets.GCP_PROJECT_PRD }}
             gcloud container clusters get-credentials tasks-cluster --zone europe-west1-b --project ${{ secrets.GCP_PROJECT_PRD }}
@@ -191,7 +191,7 @@ jobs:
           set +e
           if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
             PROJECT=${{ secrets.GCP_PROJECT_DEV }}
-            ZONE=europe-west9-b
+            ZONE=europe-west1-b
             namespaces=(dev dev-monitoring)
           else
             PROJECT=${{ secrets.GCP_PROJECT_PRD }}
