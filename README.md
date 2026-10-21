@@ -127,3 +127,7 @@ python scripts/load_test.py --env dev --host https://<domain> --token <JWT> --du
 ```
 
 Destroy an environment with the `Terraform Destroy` workflow or the commands in the [guide](terraform/readme.md#2-destroy-an-environment): GKE, Cloud SQL and the load balancer are billed while they run.
+
+## License
+
+[MIT](LICENSE)
