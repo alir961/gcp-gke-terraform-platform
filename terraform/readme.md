@@ -39,18 +39,32 @@ It covers workflows for initialization, planning, applying, and destroying infra
 - Optional input `destroy_bootstrap` (`false` by default): set it to `true` only to also delete the `bootstrap` stack, and with it the state bucket.
 - Chain: destroy `dns → cluster → db → iam` (and `bootstrap` only when `destroy_bootstrap=true`), with the same OIDC authentication as the other workflows.
 
-### GitHub secrets (per environment)
+### GitHub secrets
+These are the only secrets the workflows read. The jobs run in the GitHub environments `dev` and `prd`, so each secret can be a repository secret or an environment secret; define `TF_VAR_db_password` and `TF_VAR_app_secret_key` in each environment to give dev and prd different values.
+
 | Secret | Value |
 |--------|-------|
 | `GCP_PROJECT_DEV` / `PRD` | GCP project ID (`example-project-dev`, `example-project-prd`) |
-| `GCP_SERVICE_ACCOUNT_DEV` / `PRD` | GitHub Actions service accounts |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER_DEV` / `PRD` | Full resource names of the OIDC providers |
-| `TF_BUCKET_DEV` / `PRD` | State buckets |
-| `TF_BILLING_ACCOUNT` | Billing account ID, format `XXXXXX-XXXXXX-XXXXXX` (optional but recommended) |
-| `TF_VAR_db_password` | PostgreSQL password, stored in Secret Manager and Kubernetes |
-| `TF_VAR_app_secret_key` | FastAPI JWT signing key, synced through Secret Manager |
+| `GCP_SERVICE_ACCOUNT_DEV` / `PRD` | Email of the GitHub Actions service account in that project |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER_DEV` / `PRD` | Full resource name of the OIDC provider (`projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>`) |
+| `TF_VAR_db_password` | PostgreSQL password (`db` stack) |
+| `TF_VAR_app_secret_key` | FastAPI JWT signing key (`db` stack) |
 
-Also set the repository variable `GCP_DEPLOY_ENABLED=true`; without it the GCP jobs are skipped.
+The state buckets and the billing account are not secrets: they come from the committed backend files (`terraform/<stack>/backends/backend-<env>.hcl`) and `terraform/environments/<env>/iam.tfvars` (`billing_account_id`).
+
+### GitHub variables
+| Variable | Value |
+|--------|-------|
+| `GCP_DEPLOY_ENABLED` | `true` to run the jobs that talk to GCP (cleanup, plan, apply, destroy). Unset, CI only runs the API tests, `fmt` and `validate` |
+| `CI_RUNNER_LABEL` | Optional runner label for every job (default `ubuntu-latest`), e.g. a self-hosted runner |
+| `CI_RUNNER_MATRIX` | Optional JSON list of runners for the plan jobs (default `["ubuntu-latest"]`) |
+
+### How the secrets reach the API
+1. **Deploy, `db` stack**: Terraform takes `TF_VAR_db_password` and `TF_VAR_app_secret_key`, sets the password on the Cloud SQL user and stores both values in **Secret Manager** (`tasks-db-password` and `tasks-api-secret-key`).
+2. **Deploy, `cluster` stack**: Terraform reads them back from Secret Manager and writes them into the Kubernetes secret `tasks-api-secret` (`DB_PASS`, `SECRET_KEY`). The database private IP is not a secret: Terraform reads it from the `db` state and passes it to the Helm release.
+3. **Runtime**: the Deployment injects that Kubernetes secret into the pods as environment variables. The API only reads its environment: it never calls Secret Manager and needs no Secret Manager permission.
+
+Only the identity running Terraform (the CI service account, or you when deploying by hand) needs access to Secret Manager, Cloud SQL and the cluster. After changing a secret, re-apply `db`, then `cluster`, so the Kubernetes secret is updated. Running pods keep the old value until the next rollout: a new image tag (every apply from CI) or `kubectl rollout restart deployment/tasks-api -n <env>`.
 
 > ⚠️ **GCP IAM limits**: `roles/owner` and `roles/billing.admin` are managed outside Terraform (GCP console or `gcloud`). GCP requires a manual invitation for owners and does not allow `roles/billing.*` at project level. The team therefore keeps technical roles (`roles/editor`, `container.admin`, `dns.admin`, etc.), and existing owners are not managed by Terraform.
 > ⚠️ **Cloud SQL network**: dev and prd use the VPC and subnet created by `bootstrap` (`iac-<env>-vpc`, `iac-<env>-vpc-subnet`), in the same region as the cluster. An existing PostgreSQL instance stays bound to its VPC through the Service Networking connection: changing `vpc_network` afterwards means recreating the database.
